@@ -1,0 +1,417 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#635bdb">
+<title>NEXORA — Study & Summarize</title>
+<style>
+:root{
+  --bg:#f6f7fb;--surface:#fff;--surface2:#f0f1f7;--text:#171827;--muted:#6b6e7d;
+  --border:#e1e3ec;--accent:#635bdb;--accent2:#5148c8;--shadow:0 14px 40px rgba(28,30,55,.10);
+  --danger:#c73b52;--success:#218653;--radius:22px;
+}
+*{box-sizing:border-box}
+html,body{margin:0;min-height:100%;font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;background:var(--bg);color:var(--text)}
+body{transition:background .2s,color .2s}
+body[data-theme="dark"]{
+ --bg:#0b0d13;--surface:#151923;--surface2:#1c2130;--text:#f4f5fb;--muted:#a7adbd;
+ --border:#2b3040;--accent:#8178ff;--accent2:#7067ef;--shadow:0 14px 40px rgba(0,0,0,.32);
+}
+button,input,textarea,select{font:inherit}
+button{cursor:pointer}
+.hidden{display:none!important}
+.container{width:min(1120px,calc(100% - 32px));margin:auto}
+.btn{border:1px solid var(--border);background:var(--surface);color:var(--text);border-radius:14px;padding:12px 17px;font-weight:800}
+.btn.primary{background:var(--accent);color:#fff;border-color:var(--accent)}
+.btn.primary:hover{background:var(--accent2)}
+.btn.ghost{background:transparent}
+.btn.danger{color:var(--danger)}
+.btn:disabled{opacity:.55;cursor:not-allowed}
+input,textarea,select{width:100%;border:1px solid var(--border);background:var(--surface);color:var(--text);border-radius:13px;padding:12px 13px;outline:none}
+input:focus,textarea:focus,select:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(99,91,219,.12)}
+textarea{resize:vertical;min-height:130px}
+label.field{display:block;font-weight:800;font-size:14px;margin:0 0 14px}
+label.field>span{display:block;margin:0 0 7px}
+.muted{color:var(--muted)}
+.small{font-size:13px}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow)}
+.topbar{height:68px;position:sticky;top:0;z-index:40;background:color-mix(in srgb,var(--surface) 94%,transparent);backdrop-filter:blur(16px);border-bottom:1px solid var(--border)}
+.topbar .inner{height:100%;display:flex;align-items:center;justify-content:space-between;gap:16px}
+.brand{font-weight:950;font-size:23px;letter-spacing:-.8px}.brand span{color:var(--accent)}
+.top-actions{display:flex;gap:8px;align-items:center}
+.iconbtn{width:42px;height:42px;padding:0;border:1px solid var(--border);background:var(--surface);color:var(--text);border-radius:13px;font-size:18px}
+.landing{padding-bottom:80px}
+.hero{text-align:center;padding:80px 0 38px}
+.kicker{color:var(--accent);font-weight:900;letter-spacing:3px;font-size:13px}
+.hero h1{font-size:clamp(42px,8vw,82px);line-height:.95;letter-spacing:-4px;margin:20px auto;max-width:900px}
+.hero h1 span{color:var(--accent)}
+.hero p{max-width:680px;margin:0 auto;color:var(--muted);font-size:19px;line-height:1.55}
+.choice-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:20px;margin-top:35px}
+.choice{padding:30px;min-height:260px}.choice .emoji{font-size:42px}.choice h2{margin:16px 0 8px}.choice p{color:var(--muted);line-height:1.5}.choice .btn{margin-top:12px;width:100%}
+.summarizer{margin:30px auto 0;padding:26px;max-width:900px}
+.tabs{display:flex;gap:8px;margin-bottom:14px}.tabs button{flex:1}
+.result{white-space:pre-wrap;margin-top:18px;padding:18px;border-radius:15px;background:var(--surface2);line-height:1.6}
+.app{min-height:100vh;padding-bottom:88px}
+.app-main{padding:28px 0}
+.page{display:none}.page.active{display:block}
+.page-title{margin:0 0 6px;font-size:32px;letter-spacing:-1px}.page-sub{margin:0 0 22px;color:var(--muted)}
+.appnav{position:fixed;z-index:50;left:50%;bottom:12px;transform:translateX(-50%);width:min(760px,calc(100% - 20px));background:color-mix(in srgb,var(--surface) 96%,transparent);border:1px solid var(--border);box-shadow:var(--shadow);border-radius:20px;padding:7px;display:grid;grid-template-columns:repeat(7,1fr);gap:3px}
+.appnav button{border:0;background:transparent;color:var(--muted);border-radius:14px;padding:9px 5px;font-size:11px;font-weight:900}
+.appnav button.active{background:rgba(99,91,219,.15);color:var(--accent)}
+.navemoji{display:block;font-size:19px;line-height:1.1;margin-bottom:3px}
+.welcome{display:flex;justify-content:space-between;align-items:center;gap:20px;padding:24px;margin-bottom:18px}
+.welcome h2{font-size:32px;margin:4px 0}.welcome-actions{display:flex;gap:8px;flex-wrap:wrap}
+.goal{padding:24px;margin-bottom:18px}.goal .eyebrow{font-size:12px;font-weight:900;color:var(--accent);letter-spacing:1.5px}.goal h2{margin:9px 0;font-size:29px}.goal-meta{color:var(--muted);margin-bottom:18px}
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:18px}.stat{padding:20px}.stat b{font-size:28px}.stat span{display:block;color:var(--muted);margin-top:5px}
+.quick{padding:22px}.quick-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
+.section-grid{display:grid;grid-template-columns:1.15fr .85fr;gap:18px}.section-card{padding:22px}
+.task{display:flex;gap:12px;align-items:flex-start;padding:15px 0;border-bottom:1px solid var(--border)}.task:last-child{border-bottom:0}.task input{width:19px;height:19px;margin-top:3px;accent-color:var(--accent)}.task.done .task-title{text-decoration:line-through;color:var(--muted)}
+.progressbar{height:10px;background:var(--surface2);border-radius:99px;overflow:hidden}.progressbar>i{display:block;height:100%;background:var(--accent);width:0;transition:width .2s}
+.day-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:12px}.day{padding:18px}.day h3{margin:0 0 12px}.slot{padding:9px 0;border-top:1px solid var(--border);font-size:14px}
+.roadmap{display:grid;gap:12px}.road{display:flex;gap:15px;padding:19px}.road-num{width:38px;height:38px;border-radius:12px;background:rgba(99,91,219,.14);color:var(--accent);display:grid;place-items:center;font-weight:950;flex:none}
+.study-grid{display:grid;grid-template-columns:1fr 1fr;gap:18px}.study-card{padding:22px}.timer{text-align:center;font-size:66px;font-weight:950;letter-spacing:-3px;margin:12px 0}.timer-controls{display:flex;gap:8px;flex-wrap:wrap}.timer-controls .btn{flex:1}.preset{display:flex;gap:7px;flex-wrap:wrap;margin:12px 0}.preset button{padding:8px 11px}
+.question-box{margin-top:14px}.question{padding:17px 0;border-bottom:1px solid var(--border)}.question b{display:block;margin-bottom:8px}.answer{margin-top:8px;padding:10px;border-radius:10px;background:var(--surface2)}
+.profile-grid{display:grid;grid-template-columns:.8fr 1.2fr;gap:18px}.profile-card{padding:22px}.profile-row{display:flex;justify-content:space-between;gap:20px;padding:12px 0;border-bottom:1px solid var(--border)}.profile-row span{color:var(--muted)}.profile-row b{text-align:right}
+.settings-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:18px}.settings-card{padding:22px}
+.modal{position:fixed;inset:0;background:rgba(0,0,0,.52);z-index:100;display:none;align-items:center;justify-content:center;padding:16px}.modal.open{display:flex}.modalbox{width:min(760px,100%);max-height:92vh;overflow:auto;background:var(--surface);color:var(--text);border:1px solid var(--border);border-radius:24px;padding:24px;box-shadow:0 25px 80px rgba(0,0,0,.3)}
+.modalhead{display:flex;justify-content:space-between;align-items:center;gap:10px}.modalhead h2{margin:0}.close{border:0;background:transparent;color:var(--muted);font-size:28px}
+.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}.full{grid-column:1/-1}
+.subjects{display:grid;grid-template-columns:repeat(2,1fr);gap:8px}.check{display:flex;gap:8px;align-items:center;border:1px solid var(--border);padding:9px;border-radius:10px;font-size:14px}.check input{width:auto}
+.notice{padding:12px;border-radius:12px;background:rgba(99,91,219,.10);color:var(--text);margin-bottom:14px}
+.error{color:var(--danger);font-weight:800;margin:8px 0}
+.toast{position:fixed;z-index:200;right:16px;bottom:92px;max-width:340px;padding:14px 16px;background:var(--text);color:var(--surface);border-radius:14px;box-shadow:var(--shadow);display:none}.toast.show{display:block}
+@media(max-width:800px){
+ .choice-grid,.section-grid,.study-grid,.profile-grid,.settings-grid{grid-template-columns:1fr}
+ .stats{grid-template-columns:1fr 1fr 1fr}.quick-grid{grid-template-columns:1fr 1fr}.day-grid{grid-template-columns:1fr}
+ .welcome{align-items:flex-start;flex-direction:column}.appnav button{font-size:9px}.navemoji{font-size:17px}
+}
+@media(max-width:560px){
+ .container{width:min(100% - 20px,1120px)}.hero{padding-top:55px}.hero h1{letter-spacing:-2.5px}.hero p{font-size:16px}
+ .form-grid{grid-template-columns:1fr}.full{grid-column:auto}.subjects{grid-template-columns:1fr}
+ .stats{grid-template-columns:1fr}.quick-grid{grid-template-columns:1fr 1fr}.timer{font-size:54px}
+ .appnav{bottom:6px}.appnav button{padding:8px 2px}.page-title{font-size:28px}
+}
+</style>
+</head>
+<body data-theme="light">
+<div id="toast" class="toast"></div>
+
+<!-- PUBLIC LANDING -->
+<div id="landing">
+<header class="topbar"><div class="container inner">
+  <div class="brand">NEX<span>ORA</span></div>
+  <div class="top-actions"><button class="iconbtn" onclick="toggleTheme()" aria-label="theme">🌓</button><button class="btn" onclick="openAuth('login')">Sign in</button></div>
+</div></header>
+<main class="landing">
+<section class="hero container">
+ <div class="kicker">UNDERSTAND • STUDY • ACHIEVE</div>
+ <h1>One place to <span>learn smarter.</span></h1>
+ <p>Summarize information quickly or build a personalized study journey with goals, timetable, roadmap, questions and focused study tools.</p>
+ <div class="choice-grid">
+  <div class="choice card"><div class="emoji">🧠</div><h2>Summarize</h2><p>Turn long text into short, readable key points.</p><button class="btn primary" onclick="showSummarizer()">Start Summarizing →</button></div>
+  <div class="choice card"><div class="emoji">🎓</div><h2>Student</h2><p>Create your goal, personalized timetable, roadmap, daily tasks and study workspace.</p><button class="btn primary" onclick="startStudent()">Build My Study Plan →</button></div>
+ </div>
+ <div id="summarizer" class="summarizer card hidden">
+   <div class="tabs"><button class="btn primary" id="textTab" onclick="setSumMode('text')">Text</button><button class="btn" id="urlTab" onclick="setSumMode('url')">URL</button></div>
+   <textarea id="sumInput" placeholder="Paste a long article or text here..."></textarea>
+   <div style="display:grid;grid-template-columns:1fr auto;gap:10px;margin-top:10px"><select id="sumLength"><option value="short">Short</option><option value="medium">Medium</option><option value="long">Long</option></select><button class="btn primary" onclick="summarize()">Summarize</button></div>
+   <div id="sumResult" class="result hidden"></div>
+ </div>
+</section>
+</main>
+</div>
+
+<!-- APP -->
+<div id="app" class="app hidden">
+<header class="topbar"><div class="container inner">
+ <div class="brand">NEX<span>ORA</span></div>
+ <div class="top-actions"><span id="appUser" class="muted small"></span><button class="iconbtn" onclick="toggleTheme()">🌓</button><button class="iconbtn" onclick="go('settings')">⚙️</button></div>
+</div></header>
+<main class="container app-main">
+<!-- HOME -->
+<section id="page-home" class="page active">
+ <div class="welcome card"><div><div class="kicker">YOUR STUDY SPACE</div><h2 id="welcome">Welcome 👋</h2><div id="studentLine" class="muted"></div></div><div class="welcome-actions"><button class="btn" onclick="go('profile')">👤 Profile</button><button class="btn" onclick="openStudent()">Edit plan</button></div></div>
+ <div class="goal card"><div class="eyebrow">ACTIVE GOAL</div><h2 id="homeGoal">Set your first goal</h2><div id="homeGoalMeta" class="goal-meta"></div><button class="btn primary" onclick="go('today')">View Today's Tasks</button> <button class="btn" onclick="go('roadmap')">View Roadmap</button></div>
+ <div class="stats"><div class="stat card"><b id="statProgress">0%</b><span>21-day progress</span></div><div class="stat card"><b id="statDone">0</b><span>tasks done</span></div><div class="stat card"><b id="statFocus">Balanced</b><span>focus</span></div></div>
+ <div class="quick card"><h3>Quick access</h3><div class="quick-grid"><button class="btn" onclick="go('today')">✅ Today</button><button class="btn" onclick="go('timetable')">📅 Timetable</button><button class="btn" onclick="go('study')">🧠 Study</button><button class="btn" onclick="go('profile')">👤 Profile</button></div></div>
+</section>
+
+<!-- TODAY -->
+<section id="page-today" class="page">
+ <h1 class="page-title">Today</h1><p class="page-sub">Your tasks are generated from your subjects, daily study time and weak topics.</p>
+ <div class="section-grid"><div class="section-card card"><h3>Today's tasks</h3><div id="todayTasks"></div></div><div class="section-card card"><h3>Progress</h3><div class="progressbar"><i id="todayProgress"></i></div><p id="todayProgressText" class="muted small"></p><div class="notice">Test days: Day 7, Day 14 and Day 21. Use mistakes to adjust your next cycle.</div></div></div>
+</section>
+
+<!-- TIMETABLE -->
+<section id="page-timetable" class="page">
+ <h1 class="page-title">Timetable</h1><p class="page-sub">A simple weekly plan generated from your selected subjects.</p>
+ <div id="timetable" class="day-grid"></div>
+</section>
+
+<!-- ROADMAP -->
+<section id="page-roadmap" class="page">
+ <h1 class="page-title">Roadmap</h1><p class="page-sub">A 21-day cycle that repeats after your current goal cycle is finished.</p>
+ <div id="roadmap" class="roadmap"></div>
+ <div class="card section-card" style="margin-top:18px"><h3>Goal completion</h3><p class="muted">The ₹1499 plan is for one goal cycle. When this goal is genuinely completed, mark it complete and set a new goal separately.</p><button class="btn primary" onclick="completeGoal()">✓ Mark current goal complete</button></div>
+ <div id="history" class="card section-card" style="margin-top:18px"></div>
+</section>
+
+<!-- STUDY -->
+<section id="page-study" class="page">
+ <h1 class="page-title">Study</h1><p class="page-sub">Focus, ask doubts, save notes and practice questions.</p>
+ <div class="study-grid">
+  <div class="study-card card"><h3>⏱️ Focus Timer</h3><div id="timer" class="timer">25:00</div><div class="preset"><button class="btn" onclick="setTimer(25)">25m</button><button class="btn" onclick="setTimer(45)">45m</button><button class="btn" onclick="setTimer(60)">60m</button><button class="btn" onclick="setTimer(90)">90m</button></div><div style="display:grid;grid-template-columns:1fr auto;gap:8px"><input id="customTimer" type="number" min="5" max="180" placeholder="Custom minutes"><button class="btn" onclick="setCustomTimer()">Set</button></div><div class="timer-controls" style="margin-top:10px"><button class="btn primary" onclick="startTimer()">▶ Start</button><button class="btn" onclick="pauseTimer()">⏸ Pause</button><button class="btn" onclick="resetTimer()">↻ Reset</button></div></div>
+  <div class="study-card card"><h3>📷 Ask a Doubt</h3><textarea id="doubtText" placeholder="Type your doubt..."></textarea><label class="btn" style="display:block;text-align:center;margin-top:8px">📷 Add question photo<input id="doubtPhoto" type="file" accept="image/*" capture="environment" hidden onchange="previewPhoto()"></label><img id="doubtPreview" class="hidden" style="max-width:100%;max-height:220px;border-radius:12px;margin-top:10px"><button class="btn primary" style="margin-top:10px;width:100%" onclick="saveDoubt()">Save Doubt</button><div id="doubts" style="margin-top:12px"></div></div>
+  <div class="study-card card"><h3>📝 Study Notes</h3><textarea id="studyNote" placeholder="What did you learn? Mistakes to revise? Questions for later?"></textarea><button class="btn primary" style="margin-top:10px" onclick="saveNote()">Save Note</button><div id="notes" style="margin-top:12px"></div></div>
+  <div class="study-card card"><h3>📚 Question / PYQ Lab</h3><p class="muted small">Enter a topic. Known topics use built-in practice questions; other topics receive clearly-labelled practice prompts. They are not claimed as verified PYQs.</p><div class="form-grid"><label class="field"><span>Subject</span><input id="qSubject" placeholder="Physics"></label><label class="field"><span>Topic</span><input id="qTopic" placeholder="Newton's Laws"></label><label class="field"><span>Level</span><select id="qLevel"><option>Class level</option><option>School exam</option><option>JEE Main</option><option>JEE Advanced</option></select></label><label class="field"><span>Questions</span><select id="qCount"><option>5</option><option selected>10</option><option>15</option></select></label></div><button class="btn primary" style="width:100%" onclick="generateQuestions()">Generate Questions</button><div id="qStatus" class="muted small" style="margin-top:10px"></div><div id="questions" class="question-box"></div></div>
+ </div>
+</section>
+
+<!-- PROFILE -->
+<section id="page-profile" class="page">
+ <h1 class="page-title">Profile</h1><p class="page-sub">Your saved student information. Edit it anytime.</p>
+ <div class="profile-grid"><div class="profile-card card"><h3>Account</h3><div id="accountRows"></div><div style="display:flex;gap:8px;margin-top:15px;flex-wrap:wrap"><button class="btn primary" onclick="openStudent()">Edit Student Profile</button><button class="btn danger" onclick="logout()">Log out</button></div></div><div class="profile-card card"><h3>Study profile</h3><div id="profileRows"></div></div></div>
+</section>
+
+<!-- SETTINGS -->
+<section id="page-settings" class="page">
+ <h1 class="page-title">Settings</h1><p class="page-sub">Control the app without changing your study data by accident.</p>
+ <div class="settings-grid"><div class="settings-card card"><h3>Appearance</h3><p class="muted">Choose how NEXORA looks on this device.</p><div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn" onclick="setTheme('light')">☀️ Light</button><button class="btn" onclick="setTheme('dark')">🌙 Dark</button><button class="btn" onclick="setTheme('system')">📱 System</button></div></div><div class="settings-card card"><h3>Data</h3><p class="muted">This prototype stores data in this browser using localStorage.</p><button class="btn danger" onclick="resetAllData()">Reset local data</button></div></div>
+</section>
+</main>
+<nav class="appnav" aria-label="main navigation">
+ <button id="nav-home" class="active" onclick="go('home')"><span class="navemoji">🏠</span>Home</button>
+ <button id="nav-today" onclick="go('today')"><span class="navemoji">✅</span>Today</button>
+ <button id="nav-timetable" onclick="go('timetable')"><span class="navemoji">📅</span>Timetable</button>
+ <button id="nav-roadmap" onclick="go('roadmap')"><span class="navemoji">🗺️</span>Roadmap</button>
+ <button id="nav-study" onclick="go('study')"><span class="navemoji">🧠</span>Study</button>
+ <button id="nav-profile" onclick="go('profile')"><span class="navemoji">👤</span>Profile</button>
+ <button id="nav-settings" onclick="go('settings')"><span class="navemoji">⚙️</span>Settings</button>
+</nav>
+</div>
+
+<!-- AUTH MODAL -->
+<div id="authModal" class="modal"><div class="modalbox"><div class="modalhead"><h2 id="authTitle">Sign in to NEXORA</h2><button class="close" onclick="closeModal('authModal')">×</button></div><p class="muted">Prototype account system — data stays in this browser.</p><div id="authError" class="error"></div><label class="field" id="nameField"><span>Name</span><input id="authName" placeholder="Your name"></label><label class="field"><span>Email</span><input id="authEmail" type="email" placeholder="you@example.com"></label><label class="field"><span>Password</span><input id="authPassword" type="password" placeholder="At least 6 characters"></label><button class="btn primary" style="width:100%" onclick="submitAuth()">Continue</button><button id="authSwitch" class="btn ghost" style="width:100%;margin-top:8px" onclick="toggleAuth()">Create account</button></div></div>
+
+<!-- STUDENT MODAL -->
+<div id="studentModal" class="modal"><div class="modalbox"><div class="modalhead"><h2>Student Setup</h2><button class="close" onclick="closeModal('studentModal')">×</button></div><p class="muted">Fill this once. You can edit it later from Profile.</p><div id="studentError" class="error"></div>
+<div class="form-grid">
+<label class="field"><span>Education</span><select id="eduType" onchange="updateEducation()"><option value="school">School</option><option value="college">College</option></select></label>
+<label class="field"><span>Board</span><select id="board"><option>CBSE</option><option>ICSE</option><option>ISC</option><option>MP Board</option><option>UP Board</option><option>RBSE</option><option>Other</option></select></label>
+<label class="field"><span>Class</span><select id="classSel"><option>Class 8</option><option>Class 9</option><option>Class 10</option><option>Class 11</option><option>Class 12</option></select></label>
+<label class="field"><span>Stream</span><select id="stream" onchange="updateStream()"><option value="maths">Maths</option><option value="science">Science</option><option value="bio">Bio</option><option value="commerce">Commerce</option><option value="humanities">Humanities</option><option value="other">Other</option></select></label>
+<label class="field hidden" id="otherBoardField"><span>Your board</span><input id="otherBoard" placeholder="Write your board"></label>
+<label class="field hidden" id="otherStreamField"><span>Your stream</span><input id="otherStream" placeholder="Write your stream"></label>
+<label class="field"><span>Goal</span><select id="goal" onchange="updateGoal()"><option value="top">Top my class</option><option value="percent">Target percentage</option><option value="subject">Become strong in a subject</option><option value="exam">Prepare for my exam</option><option value="competitive">Prepare for a competitive exam</option><option value="next">Prepare for next class</option><option value="custom">Other goal</option></select></label>
+<label class="field hidden" id="percentField"><span>Target %</span><input id="targetPercent" type="number" min="1" max="100" placeholder="95"></label>
+<label class="field hidden" id="customGoalField"><span>Your goal</span><input id="customGoal" placeholder="Write your goal"></label>
+<label class="field hidden" id="examField"><span>Competitive exam</span><select id="exam"><option>JEE Main</option><option>JEE Advanced</option><option>NEET</option><option>CUET</option><option>UPSC</option><option>Other</option></select></label>
+<label class="field hidden" id="otherExamField"><span>Your exam</span><input id="otherExam" placeholder="Write exam name"></label>
+<label class="field"><span>Daily study time</span><select id="studyTime"><option value="30 minutes">30 minutes</option><option value="1 hour">1 hour</option><option value="2 hours">2 hours</option><option value="3 hours">3 hours</option><option value="4 hours">4+ hours</option></select></label>
+<label class="field"><span>Current level</span><select id="level"><option>Beginner</option><option>Intermediate</option><option>Advanced</option></select></label>
+<label class="field full"><span>Strong subjects</span><input id="strong" placeholder="e.g. English, Maths"></label>
+<label class="field full"><span>Weak subjects / topics</span><input id="weak" placeholder="e.g. Physics, Algebra"></label>
+<label class="field full"><span>Missing past work</span><textarea id="pastWork" placeholder="Chapters, homework or topics you need to catch up"></textarea></label>
+</div>
+<h3>Subjects</h3><div id="subjects" class="subjects"></div>
+<div style="display:flex;justify-content:flex-end;gap:8px;margin-top:18px"><button class="btn" onclick="closeModal('studentModal')">Cancel</button><button class="btn primary" onclick="saveStudent()">Create / Save Profile</button></div>
+</div></div>
+
+<script>
+"use strict";
+const $=id=>document.getElementById(id);
+const DB_KEY="nexora_db_v7";
+const OLD_KEY="nexora_db_v6";
+let state=loadState();
+let authMode="login",sumMode="text";
+let timerSec=1500,timerInitial=1500,timerId=null;
+
+function defaultData(){return {tasks:{},notes:[],doubts:[],history:[],questions:[],tests:[],studyLog:[],timetableDone:{},mistakes:[]}}
+function loadState(){
+  try{
+    const v=JSON.parse(localStorage.getItem(DB_KEY));
+    if(v) return migrate(v);
+    const old=JSON.parse(localStorage.getItem(OLD_KEY)||'null');
+    if(old) return migrate(old);
+  }catch(e){}
+  return {users:{},current:null,theme:"system"};
+}
+function migrate(s){
+  s=s||{users:{},current:null,theme:"system"}; s.users=s.users||{}; s.theme=s.theme||"system";
+  Object.values(s.users).forEach(u=>{u.data=Object.assign(defaultData(),u.data||{});});
+  return s;
+}
+function saveState(){localStorage.setItem(DB_KEY,JSON.stringify(state))}
+function current(){return state.current?state.users[state.current]:null}
+function userData(){let u=current(); if(!u)return defaultData(); u.data=Object.assign(defaultData(),u.data||{}); return u.data}
+function updateUserData(mut){let u=current();if(!u)return;u.data=Object.assign(defaultData(),u.data||{});const r=mut(u.data)||u.data;u.data=r;saveState();}
+function toast(msg){$("toast").textContent=msg;$("toast").classList.add("show");clearTimeout(toast.t);toast.t=setTimeout(()=>$("toast").classList.remove("show"),2800)}
+function openModal(id){$(id).classList.add("open")}
+function closeModal(id){$(id).classList.remove("open")}
+function toggleTheme(){setTheme(getThemeActual()==="dark"?"light":"dark")}
+function getThemeActual(){let t=state.theme;if(t==="system")return matchMedia("(prefers-color-scheme: dark)").matches?"dark":"light";return t}
+function setTheme(t){state.theme=t;saveState();document.body.dataset.theme=getThemeActual();toast("Theme: "+getThemeActual())}
+matchMedia("(prefers-color-scheme: dark)").addEventListener?.("change",()=>{if(state.theme==="system")document.body.dataset.theme=getThemeActual()});
+document.body.dataset.theme=getThemeActual();
+
+function showSummarizer(){$("summarizer").classList.remove("hidden");$("sumInput").focus()}
+function setSumMode(m){sumMode=m;$("textTab").classList.toggle("primary",m==="text");$("urlTab").classList.toggle("primary",m==="url");$("sumInput").placeholder=m==="url"?"Paste an article URL here...":"Paste a long article or text here..."}
+function summarize(){const text=$("sumInput").value.trim();if(!text){toast("Paste some text first.");return}if(sumMode==="url"){toast("URL extraction needs a backend. Paste the article text for this offline version.");return}const sentences=text.replace(/\s+/g," ").match(/[^.!?]+[.!?]+/g)||[text];const ratio={short:.22,medium:.45,long:.68}[$("sumLength").value]||.45;const n=Math.max(1,Math.ceil(sentences.length*ratio));$("sumResult").textContent=sentences.slice(0,n).map(s=>"• "+s.trim()).join("\n");$("sumResult").classList.remove("hidden")}
+
+function openAuth(mode){authMode=mode;$("authTitle").textContent=mode==="login"?"Sign in to NEXORA":"Create your NEXORA account";$("nameField").classList.toggle("hidden",mode==="login");$("authSwitch").textContent=mode==="login"?"Create account":"Already have an account? Sign in";$("authError").textContent="";openModal("authModal")}
+function toggleAuth(){openAuth(authMode==="login"?"signup":"login")}
+function submitAuth(){
+ const name=$("authName").value.trim(),email=$("authEmail").value.trim().toLowerCase(),pw=$("authPassword").value;
+ if(!email||!pw||(authMode==="signup"&&!name)){$("authError").textContent="Please fill all required fields.";return}
+ if(pw.length<6){$("authError").textContent="Password must be at least 6 characters.";return}
+ if(authMode==="signup"){
+   if(state.users[email]){$("authError").textContent="Account already exists. Sign in instead.";return}
+   state.users[email]={name,email,password:pw,plan:"Free",data:defaultData()};
+ }else if(!state.users[email]||state.users[email].password!==pw){$("authError").textContent="Incorrect email or password.";return}
+ state.current=email;saveState();closeModal("authModal");enterApp();
+}
+function startStudent(){if(!current()){openAuth("login");toast("Sign in first, then create your study profile.");return}openStudent()}
+function enterApp(){$("landing").classList.add("hidden");$("app").classList.remove("hidden");renderAll();go("home")}
+function logout(){pauseTimer();state.current=null;saveState();$("app").classList.add("hidden");$("landing").classList.remove("hidden");window.scrollTo(0,0);toast("Logged out")}
+if(current())enterApp();
+
+function go(page){document.querySelectorAll(".page").forEach(x=>x.classList.remove("active"));$("page-"+page).classList.add("active");document.querySelectorAll(".appnav button").forEach(x=>x.classList.remove("active"));$("nav-"+page).classList.add("active");renderPage(page);window.scrollTo({top:0,behavior:"smooth"})}
+function renderAll(){renderHome();renderToday();renderTimetable();renderRoadmap();renderStudy();renderProfile()}
+function renderPage(p){if(p==="home")renderHome();if(p==="today")renderToday();if(p==="timetable")renderTimetable();if(p==="roadmap")renderRoadmap();if(p==="study")renderStudy();if(p==="profile")renderProfile()}
+function profile(){return current()?.profile||null}
+function minutes(v){if(!v)return 60;if(v.includes("30"))return 30;if(v.includes("1 hour"))return 60;if(v.includes("2 hours"))return 120;if(v.includes("3 hours"))return 180;return 240}
+function esc(s){return String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[c]))}
+function dateOnly(d){const x=new Date(d);return new Date(x.getFullYear(),x.getMonth(),x.getDate())}
+function daysBetween(a,b){return Math.floor((dateOnly(b)-dateOnly(a))/86400000)}
+function cycleDay(){const p=profile();if(!p)return 1;return Math.max(1,Math.min(21,Number(p.currentDay)||1))}
+function phase(){const d=cycleDay();return d<=7?"Foundation":d<=14?"Practice":"Test & Improve"}
+function weakList(p){return (p?.weak||"").toLowerCase().split(",").map(x=>x.trim()).filter(Boolean)}
+function isWeak(sub,p){return weakList(p).some(w=>sub.toLowerCase().includes(w)||w.includes(sub.toLowerCase()))}
+function subjectWeights(p){return (p.subjects||[]).map(s=>isWeak(s,p)?1.7:1)}
+function todayKey(){return new Date().toISOString().slice(0,10)}
+function ensureDay(){
+ const p=profile();if(!p)return;
+ const d=userData();d.tasks=d.tasks||{};
+ const key="cycle_"+(Number(p.currentDay)||1);
+ if(!d.tasks[key]){d.tasks[key]={};generateDailyTasks(key,p,d);saveState()}
+}
+function generateDailyTasks(key,p,d){
+ const subs=p.subjects||[]; if(!subs.length)return;
+ const total=minutes(p.time),weights=subjectWeights(p),sum=weights.reduce((a,b)=>a+b,0);
+ const day=cycleDay(), arr=[];
+ subs.forEach((s,i)=>{let mins=Math.max(10,Math.round(total*weights[i]/sum));let title=isWeak(s,p)?`Focus: ${s}`:`Study: ${s}`;let action=day<=7?"Concepts + practice":day<=14?"Practice + revision":"Revision + test prep";arr.push({id:key+"_s"+i,title,meta:`${mins} min • ${action}`,subject:s,type:"study"})});
+ if(day===7||day===14||day===21)arr.push({id:key+"_test",title:`Progress Test — Day ${day}`,meta:"Take the test, check your score and review mistakes.",subject:subs[0],type:"test"});
+ if(p.pastWork&&day<=14)arr.push({id:key+"_backlog",title:"Catch up: past work",meta:"20 min • finish one missing chapter/homework item",subject:"Backlog",type:"backlog"});
+ d.tasks[key]=Object.fromEntries(arr.map(t=>[t.id,{...t,done:false}]));
+}
+function currentTasks(){const p=profile();if(!p)return [];ensureDay();return Object.values(userData().tasks["cycle_"+(Number(p.currentDay)||1)]||{})}
+function completedTaskCount(){const d=userData(),p=profile();if(!p)return 0;return Object.entries(d.tasks||{}).filter(([key])=>/^cycle_\d+$/.test(key)&&Number(key.split("_")[1])<=21).reduce((n,[,items])=>n+Object.values(items||{}).filter(t=>t.done).length,0)}
+function plannedTaskCount(){const p=profile();if(!p)return 0;return Math.max(1,(p.subjects||[]).length*21+3+((p.pastWork?14:0)))}
+function progress(){return Math.min(100,Math.round(completedTaskCount()/plannedTaskCount()*100))}
+function dayProgress(){const tasks=currentTasks();return tasks.length?Math.round(tasks.filter(t=>t.done).length/tasks.length*100):0}
+function renderHome(){
+ const u=current(),p=profile();if(!u)return;$('appUser').textContent=u.email;$('welcome').textContent="Welcome, "+(u.name||"Student").split(" ")[0]+" 👋";
+ if(!p){$('studentLine').textContent="Create your student profile to generate your plan.";$('homeGoal').textContent="Set your first study goal";$('homeGoalMeta').textContent="Your timetable, roadmap and tasks will appear here.";$('statProgress').textContent="0%";$('statDone').textContent="0";$('statFocus').textContent="Balanced";return}
+ ensureDay();$('studentLine').textContent=[p.className,p.board,p.stream].filter(Boolean).join(" • ");$('homeGoal').textContent=p.goalText||"Study goal";$('homeGoalMeta').textContent=[p.className,p.stream,p.exam].filter(Boolean).join(" • ");$('statProgress').textContent=progress()+"%";$('statDone').textContent=completedTaskCount();$('statFocus').textContent=(p.weak||"Balanced").split(",")[0].trim()||"Balanced";
+}
+function maybeAdvanceDay(){
+ const p=profile();if(!p)return false;ensureDay();const d=userData(),key="cycle_"+(Number(p.currentDay)||1),day=d.tasks[key]||{};
+ const allDone=Object.values(day).length>0&&Object.values(day).every(t=>t.done);
+ if(allDone&&(Number(p.currentDay)||1)<21){p.currentDay=(Number(p.currentDay)||1)+1;p.cycleStart=new Date().toISOString();saveState();ensureDay();return true}
+ return false;
+}
+function toggleTask(id,val){
+ const p=profile();if(!p)return;ensureDay();const key="cycle_"+(Number(p.currentDay)||1),day=userData().tasks[key]||{},task=day[id];
+ if(task?.type==="test"&&!task.done&&val){toast("Take the progress test first. The test unlocks this task.");renderToday();return}
+ updateUserData(d=>{d.tasks=d.tasks||{};const currentDayTasks=d.tasks[key]||{};if(currentDayTasks[id])currentDayTasks[id].done=!!val;d.tasks[key]=currentDayTasks;return d});
+ const advanced=maybeAdvanceDay();if(advanced)toast("Day complete 🎉 — Day "+cycleDay()+" is now unlocked!");else if(val)toast("Task completed ✓");renderAll();
+}
+function renderToday(){
+ const box=$("todayTasks");if(!profile()){box.innerHTML='<div class="muted">Create your student profile first.</div>';$("todayProgress").style.width="0%";return}
+ ensureDay();const tasks=currentTasks();const day=cycleDay(),dp=dayProgress(),testCompleted=(userData().tests||[]).some(x=>x.day===day);
+ box.innerHTML=`<div class="notice"><b>Day ${day} of 21 • ${phase()}</b><br><span class="small muted">Finish today's work to unlock the next day. Tomorrow's tasks are generated automatically.</span></div>`+tasks.map(t=>{const locked=t.type==="test"&&!testCompleted&&!t.done;return `<label class="task ${t.done?"done":""}"><input type="checkbox" ${t.done?"checked":""} ${locked?"disabled":""} onchange="toggleTask('${t.id}',this.checked)"><span><span class="task-title">${esc(t.title)}</span><div class="muted small">${esc(t.meta)}</div>${t.type==="test"?`<button type="button" class="btn small ${testCompleted?'primary':''}" style="margin-top:8px" onclick="event.preventDefault();openTest()">${testCompleted?'✓ Test completed':'Open test'}</button>`:""}</span></label>`}).join("");
+ $("todayProgress").style.width=dp+"%";$("todayProgressText").textContent=`Today: ${tasks.filter(t=>t.done).length}/${tasks.length} tasks complete • Cycle: ${progress()}% • Day ${day}/21`;
+}
+function renderTimetable(){
+ const p=profile(),box=$("timetable");if(!p){box.innerHTML='<div class="card section-card">Create your profile first.</div>';return}
+ const subs=p.subjects||[],total=minutes(p.time),weights=subjectWeights(p),sum=weights.reduce((a,b)=>a+b,0),days=["Monday","Tuesday","Wednesday","Thursday","Friday","Saturday","Sunday"],today=new Date().toLocaleDateString('en-US',{weekday:'long'}),d=userData();
+ box.innerHTML=days.map((day,di)=>{let items=subs.map((s,i)=>{let share=Math.max(10,Math.round(total*weights[i]/sum)),key=day+"_"+s,done=!!(d.timetableDone||{})[key];return `<div class="slot"><button class="btn small ${done?'primary':''}" onclick="toggleSlot('${esc(key)}')">${done?'✓ Done':'○ Mark done'}</button> 📚 <b>${esc(s)}</b> — ${share} min${isWeak(s,p)?' • weak-topic focus':''}</div>`}).join("");if(di===6)items+='<div class="slot">📝 <b>Weekly review</b> — check mistakes and adjust weak topics</div>';return `<div class="day card" style="${day===today?'border-color:var(--accent)':''}"><h3>${day}${day===today?' • Today':''}</h3>${items}</div>`}).join("");
+}
+function toggleSlot(key){updateUserData(d=>{d.timetableDone=d.timetableDone||{};d.timetableDone[key]=!d.timetableDone[key];return d});renderTimetable();toast("Timetable updated")}
+function renderRoadmap(){
+ const p=profile(),box=$("roadmap");if(!p){box.innerHTML='<div class="card section-card">Create your profile first.</div>';$("history").innerHTML="";return}
+ const day=cycleDay(),steps=[
+ ["1","Foundation","Days 1–7","Build routine, learn core concepts and complete daily practice.",day>=1&&day<=7],
+ ["2","Practice","Days 8–14","Increase question practice and spend extra time on weak topics.",day>=8&&day<=14],
+ ["3","Test & Improve","Days 15–21","Take tests, analyse mistakes and revise weak areas.",day>=15],
+ ["4","Next Cycle","After Day 21","Use your score, mistakes and unfinished work to build the next cycle.",false]
+ ];
+ box.innerHTML=steps.map(x=>`<div class="road card" style="${x[4]?'border-color:var(--accent)':''}"><div class="road-num">${x[0]}</div><div><b>${x[1]} ${x[4]?'• Current':''}</b><div class="muted small" style="margin-top:5px">${x[2]}: ${x[3]}</div></div></div>`).join("");
+ const h=userData().history||[];$('history').innerHTML=`<h3>Cycle status</h3><p class="muted">Day ${day}/21 • ${phase()} • ${progress()}% overall task progress.</p>`+(h.length?'<h3 style="margin-top:18px">Completed goals</h3>'+h.map(x=>`<div class="profile-row"><span>${esc(x.goal)}</span><b>✓ ${new Date(x.date).toLocaleDateString()}</b></div>`).join(""):'<p class="muted">No completed goals yet.</p>');
+}
+function uResetTasks(){updateUserData(d=>{d.tasks={};d.timetableDone={};return d})}
+function completeGoal(){const p=profile();if(!p){toast("Create a goal first.");return}if(cycleDay()<21||progress()<80){if(!confirm("This cycle is not finished yet. Mark the goal complete anyway?"))return}updateUserData(d=>{d.history=d.history||[];d.history.unshift({goal:p.goalText||"Goal",date:new Date().toISOString()});return d});p.goalDone=true;p.cycleStart=new Date().toISOString();p.currentDay=1;uResetTasks();saveState();toast("Goal completed. A fresh 21-day cycle is ready.");renderAll();go("home")}
+
+function setTimer(min){pauseTimer();timerInitial=Math.max(5,Math.min(180,Number(min)))*60;timerSec=timerInitial;updateTimer()}
+function setCustomTimer(){let n=Number($("customTimer").value);if(!n||n<5||n>180){toast("Choose 5–180 minutes.");return}setTimer(n)}
+function updateTimer(){$("timer").textContent=String(Math.floor(timerSec/60)).padStart(2,"0")+":"+String(timerSec%60).padStart(2,"0")}
+function startTimer(){if(timerId)return;timerId=setInterval(()=>{if(timerSec<=0){pauseTimer();toast("Focus session complete 🎉");logStudy();return}timerSec--;updateTimer()},1000)}
+function pauseTimer(){if(timerId){clearInterval(timerId);timerId=null}}
+function resetTimer(){pauseTimer();timerSec=timerInitial;updateTimer()}
+function logStudy(){const p=profile();if(!p)return;const mins=Math.max(1,Math.round(timerInitial/60));updateUserData(d=>{d.studyLog=d.studyLog||[];d.studyLog.unshift({date:new Date().toISOString(),minutes:mins,subject:p.subjects?.[0]||"General"});return d});renderAll()}
+function previewPhoto(){const f=$("doubtPhoto").files[0],img=$("doubtPreview");if(!f){img.classList.add("hidden");return}const r=new FileReader();r.onload=()=>{img.src=r.result;img.classList.remove("hidden")};r.readAsDataURL(f)}
+function saveDoubt(){const text=$("doubtText").value.trim(),f=$("doubtPhoto").files[0];if(!text&&!f){toast("Type a doubt or add a photo.");return}const save=photo=>updateUserData(d=>{d.doubts=d.doubts||[];d.doubts.unshift({text,photo,date:new Date().toISOString(),status:"open",solution:""});return d});if(f){const r=new FileReader();r.onload=()=>{save(r.result);clearDoubtForm();renderStudy();toast("Doubt saved — open it to write/verify a solution.")};r.readAsDataURL(f)}else{save("");clearDoubtForm();renderStudy();toast("Doubt saved")}}
+function clearDoubtForm(){$("doubtText").value="";$('doubtPhoto').value="";$('doubtPreview').classList.add('hidden')}
+function saveSolution(i){const input=$("solution_"+i),val=input.value.trim();if(!val){toast("Write a solution first.");return}updateUserData(d=>{if(d.doubts?.[i]){d.doubts[i].solution=val;d.doubts[i].status="solved"}return d});renderStudy();toast("Solution saved ✓")}
+function saveNote(){const t=$("studyNote").value.trim();if(!t){toast("Write a note first.");return}updateUserData(d=>{d.notes=d.notes||[];d.notes.unshift({text:t,date:new Date().toISOString()});return d});$("studyNote").value="";renderStudy();toast("Note saved")}
+function renderStudy(){
+ updateTimer();const d=userData();
+ $("doubts").innerHTML=(d.doubts||[]).slice(0,10).map((x,i)=>`<div class="card" style="padding:12px;margin-top:8px"><b>Doubt ${i+1}</b> <span class="muted small">${x.status==='solved'?'• Solved':'• Open'}</span><div class="muted small">${new Date(x.date).toLocaleString()}</div>${x.text?`<p>${esc(x.text)}</p>`:""}${x.photo?`<img src="${x.photo}" style="max-width:100%;max-height:180px;border-radius:10px">`:""}<textarea id="solution_${i}" placeholder="Write your solution / corrected answer / what you learned..." style="min-height:80px;margin-top:8px">${esc(x.solution||"")}</textarea><button class="btn small primary" style="margin-top:7px" onclick="saveSolution(${i})">Save solution</button></div>`).join("")||'<div class="muted small">No saved doubts.</div>';
+ $("notes").innerHTML=(d.notes||[]).slice(0,10).map(x=>`<div class="card" style="padding:12px;margin-top:8px"><div class="muted small">${new Date(x.date).toLocaleString()}</div>${esc(x.text)}</div>`).join("")||'<div class="muted small">No saved notes.</div>';
+}
+
+// Offline practice/test bank. These are explicitly practice questions, not claimed as official PYQs.
+const bank={
+ "newton's laws":[["A 5 kg block has net force 20 N. Find acceleration.",["2 m/s²","4 m/s²","10 m/s²","25 m/s²"],1,"a=F/m"],["A body moves with constant velocity. What is its net force?",["0 N","1 N","Depends on mass","Cannot say"],0,"constant velocity means zero acceleration"],["10 N and 6 N act oppositely on 2 kg. Find acceleration.",["1 m/s²","2 m/s²","4 m/s²","8 m/s²"],1,"net force=4 N; a=4/2"]],
+ "kinematics":[["A car starts from rest with a=2 m/s² for 5 s. Find final velocity.",["5 m/s","7 m/s","10 m/s","12 m/s"],2,"v=u+at"],["u=5 m/s, a=2 m/s², t=4 s. Find displacement.",["28 m","36 m","40 m","52 m"],1,"s=ut+½at²"],["What does zero acceleration mean for velocity?",["Velocity is always zero","Velocity remains constant","Speed doubles","Direction must change"],1,"acceleration is the rate of change of velocity"]],
+ "quadratic equations":[["Solve x²−5x+6=0.",["x=1,6","x=2,3","x=-2,-3","x=0,6"],1,"factor into (x−2)(x−3)"],["For x²+4x+4=0, nature of roots?",["No real roots","Equal real roots","Distinct real roots","One positive and one negative"],1,"discriminant is zero"],["For x²−7x+10=0, sum of roots?",["-7","5","7","10"],2,"sum = −b/a"]],
+ "trigonometry":[["Find sin 30°.",["0","1/2","√3/2","1"],1,"standard value"],["If tan θ=1 and θ is acute, θ=?",["30°","45°","60°","90°"],1,"tan 45°=1"],["Simplify sin²θ+cos²θ.",["0","1/2","1","2"],2,"fundamental identity"]],
+ "mole concept":[["Particles in one mole?",["6.022×10²³","3.011×10²³","9.8×10²³","1.602×10⁻¹⁹"],0,"Avogadro constant"],["Moles in 18 g water if molar mass is 18 g/mol?",["0.5 mol","1 mol","2 mol","18 mol"],1,"n=mass/molar mass"],["Molar mass of CO₂?",["28 g/mol","32 g/mol","40 g/mol","44 g/mol"],3,"12+2×16"]]
+};
+function topicKey(topic){const t=topic.toLowerCase();return Object.keys(bank).find(k=>t.includes(k)||k.includes(t))}
+function generateQuestions(){
+ const topic=$("qTopic").value.trim(),sub=$("qSubject").value.trim()||"the subject",count=Number($("qCount").value);if(!topic){toast("Enter a topic first.");return}
+ const key=topicKey(topic),raw=key?bank[key]:null;let qs=[];
+ if(raw){while(qs.length<count)qs=qs.concat(raw.map(x=>({q:x[0],opts:x[1],correct:x[2],e:x[3]})));qs=qs.slice(0,count).sort(()=>Math.random()-.5)}else{const prompts=[`Define ${topic} and state its most important formula, law or property.`,`Explain the main idea of ${topic} in 2–3 lines and give one example.`,`Write one common mistake students make while studying ${topic}.`,`Create a short ${sub} practice problem based on ${topic}.`,`What prerequisite concept is important before studying ${topic}?`,`Give one real-life application of ${topic}.`,`Compare two closely related ideas inside ${topic}.`,`Write a one-line revision question about ${topic}.`,`What diagram or graph could help explain ${topic}?`,`Write a test-style question on ${topic}.`];qs=prompts.slice(0,count).map(q=>({q,a:"Use your textbook/class notes to verify this practice prompt.",e:"Generated practice prompt — not a verified PYQ."}))}
+ $("qStatus").textContent=key?"Practice set from NEXORA's built-in topic bank.":"Generated practice set. Not verified PYQs.";
+ $("questions").innerHTML=qs.map((x,i)=>`<div class="question"><b>${i+1}. ${esc(x.q)}</b>${x.opts?`<div style="display:grid;gap:6px;margin-top:8px">${x.opts.map((o,j)=>`<label class="check"><input type="radio" name="practice${i}" value="${j}"> ${esc(o)}</label>`).join("")}</div><button class="btn small" style="margin-top:8px" onclick="checkPractice(${i},${x.correct})">Check</button><div id="pc_${i}" class="answer hidden"></div>`:`<div class="answer">${esc(x.a)}<br><span class="muted">${esc(x.e)}</span></div>`}</div>`).join("");
+ updateUserData(d=>{d.questions=qs;return d});
+}
+function checkPractice(i,correct){const el=document.querySelector(`input[name="practice${i}"]:checked`),out=$("pc_"+i);if(!el){toast("Choose an answer first.");return}const ok=Number(el.value)===correct;out.textContent=ok?"✓ Correct":"✗ Not correct — review the concept.";out.classList.remove("hidden");out.style.border=ok?"1px solid var(--success)":"1px solid var(--danger)"}
+
+function openTest(){const p=profile();if(!p){toast("Create your profile first.");return}const topic=p.weak?.split(',')[0]?.trim()||p.subjects?.[0]||"Newton's Laws";const key=topicKey(topic)||Object.keys(bank).find(k=>p.subjects?.some(s=>k.includes(s.toLowerCase().split(' ')[0])))||"newton's laws";const qs=bank[key].map(x=>({q:x[0],opts:x[1],correct:x[2],e:x[3]})).sort(()=>Math.random()-.5).slice(0,5);const box=$("questions");go("study");$("qStatus").textContent=`Progress Test • Day ${cycleDay()} • ${key}`;box.innerHTML=`<div class="notice"><b>Progress Test</b><br>Answer all 5 questions, then submit. Your score and mistakes will be saved.</div>`+qs.map((x,i)=>`<div class="question"><b>${i+1}. ${esc(x.q)}</b><div style="display:grid;gap:6px;margin-top:8px">${x.opts.map((o,j)=>`<label class="check"><input type="radio" name="test${i}" value="${j}"> ${esc(o)}</label>`).join("")}</div></div>`).join("")+`<button class="btn primary" style="width:100%;margin-top:12px" onclick='submitTest(${JSON.stringify(qs).replace(/</g,"\\u003c")})'>Submit test</button>`}
+function submitTest(qs){
+ let score=0,miss=[];qs.forEach((x,i)=>{const a=document.querySelector(`input[name="test${i}"]:checked`);if(a&&Number(a.value)===x.correct)score++;else miss.push(x.q)});
+ if(qs.some((x,i)=>!document.querySelector(`input[name="test${i}"]:checked`))){toast("Answer all questions before submitting.");return}
+ const dayNo=cycleDay();updateUserData(d=>{d.tests=d.tests||[];d.tests.unshift({date:new Date().toISOString(),day:dayNo,score,total:qs.length,mistakes:miss});d.mistakes=(d.mistakes||[]).concat(miss.map(q=>({q,date:new Date().toISOString()}))).slice(-50);d.tasks=d.tasks||{};const key="cycle_"+dayNo;d.tasks[key]=d.tasks[key]||{};const tk=Object.keys(d.tasks[key]).find(k=>d.tasks[key][k].type==="test");if(tk)d.tasks[key][tk].done=true;return d});
+ const advanced=maybeAdvanceDay();toast(`Test submitted: ${score}/${qs.length} 🎯`+(advanced?" • Next day unlocked!":""));renderAll();go("today")
+}
+
+function updateEducation(){const college=$("eduType").value==="college";$("classSel").disabled=college;$("stream").disabled=college;renderSubjects()}
+function updateStream(){const other=$("stream").value==="other";$("otherStreamField").classList.toggle("hidden",!other);renderSubjects()}
+$("board").addEventListener("change",()=>$("otherBoardField").classList.toggle("hidden",$("board").value!=="Other"));
+function updateGoal(){const g=$("goal").value;$("percentField").classList.toggle("hidden",g!=="percent");$("customGoalField").classList.toggle("hidden",g!=="custom");$("examField").classList.toggle("hidden",g!=="competitive");if(g!=="competitive")$("otherExamField").classList.add("hidden")}
+$("exam").addEventListener("change",()=>$("otherExamField").classList.toggle("hidden",$("exam").value!=="Other"));
+function renderSubjects(){const college=$("eduType").value==="college",stream=$("stream").value;let a=college?["Physics","Chemistry","Mathematics","Biology","English","Computer Science","Other"]:stream==="maths"?["Mathematics","Physics","Chemistry","English","Computer Science","Physical Education","Other"]:stream==="bio"?["Biology","Physics","Chemistry","English","Computer Science","Physical Education","Other"]:stream==="commerce"?["Accountancy","Business Studies","Economics","Mathematics","English","Computer Science","Other"]:stream==="humanities"?["History","Geography","Political Science","Economics","English","Sociology","Psychology","Other"]:["Mathematics","Science","English","Hindi","Social Science","Computer / IT","Other"];const old=new Set([...document.querySelectorAll("#subjects input:checked")].map(x=>x.value));$("subjects").innerHTML=a.map(s=>`<label class="check"><input type="checkbox" value="${esc(s)}" ${old.has(s)?"checked":""}>${esc(s)}</label>`).join("")}
+function openStudent(){const p=profile()||{};$("studentError").textContent="";$("eduType").value=p.type||"school";$("board").value=["CBSE","ICSE","ISC","MP Board","UP Board","RBSE","Other"].includes(p.board)?p.board:"Other";$("otherBoard").value=p.board&&!['CBSE','ICSE','ISC','MP Board','UP Board','RBSE'].includes(p.board)?p.board:"";$("classSel").value=p.className||"Class 11";$("stream").value=p.streamKey||"maths";$("otherStream").value=p.stream||"";$("goal").value=p.goalKey||"top";$("targetPercent").value=p.target||"";$("customGoal").value=p.customGoal||"";$("exam").value=p.examKey||"JEE Main";$("otherExam").value=p.exam&&!['JEE Main','JEE Advanced','NEET','CUET','UPSC'].includes(p.exam)?p.exam:"";$("studyTime").value=p.time||"2 hours";$("level").value=p.level||"Intermediate";$("strong").value=p.strong||"";$("weak").value=p.weak||"";$("pastWork").value=p.pastWork||"";updateEducation();updateStream();updateGoal();$("board").dispatchEvent(new Event("change"));$("exam").dispatchEvent(new Event("change"));setTimeout(()=>{let chosen=new Set(p.subjects||[]);document.querySelectorAll("#subjects input").forEach(x=>x.checked=chosen.has(x.value))},0);openModal("studentModal")}
+function saveStudent(){
+ const college=$("eduType").value==="college",board=$("board").value==="Other"?$("otherBoard").value.trim():$("board").value,streamKey=$("stream").value,stream=streamKey==="other"?$("otherStream").value.trim():streamKey,g=$("goal").value,examKey=$("exam").value,exam=examKey==="Other"?$("otherExam").value.trim():examKey,subs=[...document.querySelectorAll("#subjects input:checked")].map(x=>x.value).filter(x=>x!=="Other");
+ if(!board||(!college&&!stream)||!subs.length){$("studentError").textContent="Please select board/stream and at least one subject.";return}if(g==="competitive"&&!exam){$("studentError").textContent="Please choose a competitive exam or write Other.";return}if(g==="custom"&&!$("customGoal").value.trim()){$("studentError").textContent="Please write your goal.";return}
+ let goalText={top:"Top my class",percent:"Achieve "+($("targetPercent").value||"")+"%",subject:"Become strong in my subjects",exam:"Prepare for my exam",competitive:"Prepare for "+exam,next:"Prepare for the next class",custom:$("customGoal").value.trim()}[g];const u=current(),old=u.profile;const cycleStart=old?.cycleStart||new Date().toISOString(),currentDay=old?.currentDay||1;u.profile={type:college?"college":"school",board,className:college?"College":$("classSel").value,streamKey,stream,goalKey:g,goalText,target:$("targetPercent").value,customGoal:$("customGoal").value,examKey,exam,time:$("studyTime").value,level:$("level").value,strong:$("strong").value.trim(),weak:$("weak").value.trim(),pastWork:$("pastWork").value.trim(),subjects:subs,goalDone:false,cycleStart,currentDay};saveState();closeModal("studentModal");ensureDay();renderAll();toast("Profile saved — your live plan was updated.");go("home")}
+function renderProfile(){const u=current(),p=profile();if(!u)return;$("accountRows").innerHTML=`<div class="profile-row"><span>Name</span><b>${esc(u.name)}</b></div><div class="profile-row"><span>Email</span><b>${esc(u.email)}</b></div><div class="profile-row"><span>Plan</span><b>${esc(u.plan||"Free")}</b></div>`;if(!p){$("profileRows").innerHTML='<p class="muted">No student profile yet.</p>';return}const rows=[["Education",p.type],["Board",p.board],["Class",p.className],["Stream",p.stream], ["Subjects",(p.subjects||[]).join(", ")],["Goal",p.goalText],["Competitive exam",p.exam],["Daily study",p.time],["Level",p.level],["Strong",p.strong],["Weak",p.weak],["Past work",p.pastWork],["Cycle","Day "+cycleDay()+" / 21"]];$("profileRows").innerHTML=rows.filter(x=>x[1]).map(x=>`<div class="profile-row"><span>${esc(x[0])}</span><b>${esc(x[1])}</b></div>`).join("")}
+function resetAllData(){if(!confirm("This will remove all NEXORA data from this browser. Continue?"))return;localStorage.removeItem(DB_KEY);localStorage.removeItem(OLD_KEY);location.reload()}
+window.addEventListener("click",e=>{if(e.target.classList.contains("modal"))e.target.classList.remove("open")});
+</script>
+</body>
+</html>
