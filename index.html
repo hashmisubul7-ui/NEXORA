@@ -92,6 +92,19 @@ label.field>span{display:block;margin:0 0 7px}
  .stats{grid-template-columns:1fr}.quick-grid{grid-template-columns:1fr 1fr}.timer{font-size:54px}
  .appnav{bottom:6px}.appnav button{padding:8px 2px}.page-title{font-size:28px}
 }
+
+/* NEXORA study-session engine */
+.study-modal{position:fixed;inset:0;background:rgba(0,0,0,.55);display:none;align-items:flex-start;justify-content:center;padding:20px;z-index:9999;overflow:auto}
+.study-modal.open{display:flex}
+.study-modal-box{width:min(760px,100%);background:var(--card);color:var(--text);border-radius:20px;padding:22px;box-shadow:0 20px 60px rgba(0,0,0,.3);margin:20px auto}
+.study-modal-head{display:flex;justify-content:space-between;gap:12px;align-items:flex-start}
+.lesson-block{padding:14px;border:1px solid var(--border);border-radius:14px;margin-top:12px}
+.practice-q{padding:14px;border:1px solid var(--border);border-radius:14px;margin-top:10px}
+.practice-q input{margin-top:8px;width:100%}
+.session-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px}
+.task-open{display:block;width:100%;text-align:left;border:0;background:transparent;color:inherit;cursor:pointer;padding:0}
+.test-option{display:block;padding:9px;border:1px solid var(--border);border-radius:10px;margin-top:7px;cursor:pointer}
+.test-option input{margin-right:7px}
 </style>
 </head>
 <body data-theme="light">
@@ -139,7 +152,7 @@ label.field>span{display:block;margin:0 0 7px}
 
 <!-- TODAY -->
 <section id="page-today" class="page">
- <h1 class="page-title">Today</h1><p class="page-sub">Your tasks are generated from your subjects, daily study time and weak topics.</p>
+ <h1 class="page-title">Today</h1><p class="page-sub">Open each task to study the lesson, see an example, solve practice questions and then complete the session.</p>
  <div class="section-grid"><div class="section-card card"><h3>Today's tasks</h3><div id="todayTasks"></div></div><div class="section-card card"><h3>Progress</h3><div class="progressbar"><i id="todayProgress"></i></div><p id="todayProgressText" class="muted small"></p><div class="notice">Test days: Day 7, Day 14 and Day 21. Use mistakes to adjust your next cycle.</div></div></div>
 </section>
 
@@ -221,32 +234,22 @@ label.field>span{display:block;margin:0 0 7px}
 <script>
 "use strict";
 const $=id=>document.getElementById(id);
-const DB_KEY="nexora_db_v7";
-const OLD_KEY="nexora_db_v6";
+const DB_KEY="nexora_db_v6";
 let state=loadState();
-let authMode="login",sumMode="text";
+let authMode="login";
+let sumMode="text";
 let timerSec=1500,timerInitial=1500,timerId=null;
 
-function defaultData(){return {tasks:{},notes:[],doubts:[],history:[],questions:[],tests:[],studyLog:[],timetableDone:{},mistakes:[]}}
 function loadState(){
-  try{
-    const v=JSON.parse(localStorage.getItem(DB_KEY));
-    if(v) return migrate(v);
-    const old=JSON.parse(localStorage.getItem(OLD_KEY)||'null');
-    if(old) return migrate(old);
-  }catch(e){}
-  return {users:{},current:null,theme:"system"};
-}
-function migrate(s){
-  s=s||{users:{},current:null,theme:"system"}; s.users=s.users||{}; s.theme=s.theme||"system";
-  Object.values(s.users).forEach(u=>{u.data=Object.assign(defaultData(),u.data||{});});
-  return s;
+ try{return JSON.parse(localStorage.getItem(DB_KEY))||{users:{},current:null,theme:"system"}}catch(e){return {users:{},current:null,theme:"system"}}
 }
 function saveState(){localStorage.setItem(DB_KEY,JSON.stringify(state))}
 function current(){return state.current?state.users[state.current]:null}
-function userData(){let u=current(); if(!u)return defaultData(); u.data=Object.assign(defaultData(),u.data||{}); return u.data}
-function updateUserData(mut){let u=current();if(!u)return;u.data=Object.assign(defaultData(),u.data||{});const r=mut(u.data)||u.data;u.data=r;saveState();}
-function toast(msg){$("toast").textContent=msg;$("toast").classList.add("show");clearTimeout(toast.t);toast.t=setTimeout(()=>$("toast").classList.remove("show"),2800)}
+function userKey(){return state.current||"guest"}
+function userData(){let u=current();return u?u.data:{tasks:{},notes:[],doubts:[],history:[],questions:[]}}
+function updateUserData(mut){let u=current();if(!u)return;u.data=mut(u.data||{tasks:{},notes:[],doubts:[],history:[],questions:[]});saveState()}
+
+function toast(msg){$("toast").textContent=msg;$("toast").classList.add("show");clearTimeout(toast.t);toast.t=setTimeout(()=>$("toast").classList.remove("show"),2600)}
 function openModal(id){$(id).classList.add("open")}
 function closeModal(id){$(id).classList.remove("open")}
 function toggleTheme(){setTheme(getThemeActual()==="dark"?"light":"dark")}
@@ -257,7 +260,15 @@ document.body.dataset.theme=getThemeActual();
 
 function showSummarizer(){$("summarizer").classList.remove("hidden");$("sumInput").focus()}
 function setSumMode(m){sumMode=m;$("textTab").classList.toggle("primary",m==="text");$("urlTab").classList.toggle("primary",m==="url");$("sumInput").placeholder=m==="url"?"Paste an article URL here...":"Paste a long article or text here..."}
-function summarize(){const text=$("sumInput").value.trim();if(!text){toast("Paste some text first.");return}if(sumMode==="url"){toast("URL extraction needs a backend. Paste the article text for this offline version.");return}const sentences=text.replace(/\s+/g," ").match(/[^.!?]+[.!?]+/g)||[text];const ratio={short:.22,medium:.45,long:.68}[$("sumLength").value]||.45;const n=Math.max(1,Math.ceil(sentences.length*ratio));$("sumResult").textContent=sentences.slice(0,n).map(s=>"• "+s.trim()).join("\n");$("sumResult").classList.remove("hidden")}
+function summarize(){
+ const text=$("sumInput").value.trim();if(!text){toast("Paste some text first.");return}
+ if(sumMode==="url"){toast("URL extraction needs a backend. Paste the article text for this offline version.");return}
+ const sentences=text.replace(/\s+/g," ").match(/[^.!?]+[.!?]+/g)||[text];
+ const ratio={short:.22,medium:.45,long:.68}[$("sumLength").value]||.45;
+ const n=Math.max(1,Math.ceil(sentences.length*ratio));
+ $("sumResult").textContent=sentences.slice(0,n).map(s=>"• "+s.trim()).join("\n");
+ $("sumResult").classList.remove("hidden");
+}
 
 function openAuth(mode){authMode=mode;$("authTitle").textContent=mode==="login"?"Sign in to NEXORA":"Create your NEXORA account";$("nameField").classList.toggle("hidden",mode==="login");$("authSwitch").textContent=mode==="login"?"Create account":"Already have an account? Sign in";$("authError").textContent="";openModal("authModal")}
 function toggleAuth(){openAuth(authMode==="login"?"signup":"login")}
@@ -267,151 +278,319 @@ function submitAuth(){
  if(pw.length<6){$("authError").textContent="Password must be at least 6 characters.";return}
  if(authMode==="signup"){
    if(state.users[email]){$("authError").textContent="Account already exists. Sign in instead.";return}
-   state.users[email]={name,email,password:pw,plan:"Free",data:defaultData()};
+   state.users[email]={name,email,password:pw,plan:"Free",data:{tasks:{},notes:[],doubts:[],history:[],questions:[]}};
  }else if(!state.users[email]||state.users[email].password!==pw){$("authError").textContent="Incorrect email or password.";return}
  state.current=email;saveState();closeModal("authModal");enterApp();
 }
 function startStudent(){if(!current()){openAuth("login");toast("Sign in first, then create your study profile.");return}openStudent()}
 function enterApp(){$("landing").classList.add("hidden");$("app").classList.remove("hidden");renderAll();go("home")}
-function logout(){pauseTimer();state.current=null;saveState();$("app").classList.add("hidden");$("landing").classList.remove("hidden");window.scrollTo(0,0);toast("Logged out")}
+function logout(){state.current=null;saveState();$("app").classList.add("hidden");$("landing").classList.remove("hidden");window.scrollTo(0,0);toast("Logged out")}
 if(current())enterApp();
 
-function go(page){document.querySelectorAll(".page").forEach(x=>x.classList.remove("active"));$("page-"+page).classList.add("active");document.querySelectorAll(".appnav button").forEach(x=>x.classList.remove("active"));$("nav-"+page).classList.add("active");renderPage(page);window.scrollTo({top:0,behavior:"smooth"})}
+function go(page){
+ document.querySelectorAll(".page").forEach(x=>x.classList.remove("active"));
+ $("page-"+page).classList.add("active");
+ document.querySelectorAll(".appnav button").forEach(x=>x.classList.remove("active"));
+ $("nav-"+page).classList.add("active");
+ renderPage(page);window.scrollTo({top:0,behavior:"smooth"});
+}
 function renderAll(){renderHome();renderToday();renderTimetable();renderRoadmap();renderStudy();renderProfile()}
 function renderPage(p){if(p==="home")renderHome();if(p==="today")renderToday();if(p==="timetable")renderTimetable();if(p==="roadmap")renderRoadmap();if(p==="study")renderStudy();if(p==="profile")renderProfile()}
 function profile(){return current()?.profile||null}
 function minutes(v){if(!v)return 60;if(v.includes("30"))return 30;if(v.includes("1 hour"))return 60;if(v.includes("2 hours"))return 120;if(v.includes("3 hours"))return 180;return 240}
-function esc(s){return String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[c]))}
-function dateOnly(d){const x=new Date(d);return new Date(x.getFullYear(),x.getMonth(),x.getDate())}
-function daysBetween(a,b){return Math.floor((dateOnly(b)-dateOnly(a))/86400000)}
-function cycleDay(){const p=profile();if(!p)return 1;return Math.max(1,Math.min(21,Number(p.currentDay)||1))}
-function phase(){const d=cycleDay();return d<=7?"Foundation":d<=14?"Practice":"Test & Improve"}
-function weakList(p){return (p?.weak||"").toLowerCase().split(",").map(x=>x.trim()).filter(Boolean)}
-function isWeak(sub,p){return weakList(p).some(w=>sub.toLowerCase().includes(w)||w.includes(sub.toLowerCase()))}
-function subjectWeights(p){return (p.subjects||[]).map(s=>isWeak(s,p)?1.7:1)}
-function todayKey(){return new Date().toISOString().slice(0,10)}
-function ensureDay(){
- const p=profile();if(!p)return;
- const d=userData();d.tasks=d.tasks||{};
- const key="cycle_"+(Number(p.currentDay)||1);
- if(!d.tasks[key]){d.tasks[key]={};generateDailyTasks(key,p,d);saveState()}
+function subjects(){return profile()?.subjects||[]}
+
+function cycleDay(){
+ const p=profile(); if(!p) return 1;
+ if(!p.planStart) return 1;
+ const start=new Date(p.planStart); start.setHours(0,0,0,0);
+ const now=new Date(); now.setHours(0,0,0,0);
+ const diff=Math.max(0,Math.floor((now-start)/86400000));
+ return Math.min(21,diff+1);
 }
-function generateDailyTasks(key,p,d){
- const subs=p.subjects||[]; if(!subs.length)return;
- const total=minutes(p.time),weights=subjectWeights(p),sum=weights.reduce((a,b)=>a+b,0);
- const day=cycleDay(), arr=[];
- subs.forEach((s,i)=>{let mins=Math.max(10,Math.round(total*weights[i]/sum));let title=isWeak(s,p)?`Focus: ${s}`:`Study: ${s}`;let action=day<=7?"Concepts + practice":day<=14?"Practice + revision":"Revision + test prep";arr.push({id:key+"_s"+i,title,meta:`${mins} min • ${action}`,subject:s,type:"study"})});
- if(day===7||day===14||day===21)arr.push({id:key+"_test",title:`Progress Test — Day ${day}`,meta:"Take the test, check your score and review mistakes.",subject:subs[0],type:"test"});
- if(p.pastWork&&day<=14)arr.push({id:key+"_backlog",title:"Catch up: past work",meta:"20 min • finish one missing chapter/homework item",subject:"Backlog",type:"backlog"});
- d.tasks[key]=Object.fromEntries(arr.map(t=>[t.id,{...t,done:false}]));
+function phase(){
+ const d=cycleDay();
+ return d<=7?"Foundation":d<=14?"Practice":"Test & Improve";
 }
-function currentTasks(){const p=profile();if(!p)return [];ensureDay();return Object.values(userData().tasks["cycle_"+(Number(p.currentDay)||1)]||{})}
-function completedTaskCount(){const d=userData(),p=profile();if(!p)return 0;return Object.entries(d.tasks||{}).filter(([key])=>/^cycle_\d+$/.test(key)&&Number(key.split("_")[1])<=21).reduce((n,[,items])=>n+Object.values(items||{}).filter(t=>t.done).length,0)}
-function plannedTaskCount(){const p=profile();if(!p)return 0;return Math.max(1,(p.subjects||[]).length*21+3+((p.pastWork?14:0)))}
-function progress(){return Math.min(100,Math.round(completedTaskCount()/plannedTaskCount()*100))}
-function dayProgress(){const tasks=currentTasks();return tasks.length?Math.round(tasks.filter(t=>t.done).length/tasks.length*100):0}
+const lessonBank={
+ "physics":{
+  "kinematics":{title:"Kinematics — Motion Basics",concept:"Kinematics describes motion using displacement, velocity and acceleration without focusing on its cause.",formulas:["v = u + at","s = ut + ½at²","v² = u² + 2as"],example:"A body starts from rest and accelerates at 2 m/s² for 5 s. v = 0 + 2×5 = 10 m/s.",practice:[["A car starts from rest with a=3 m/s² for 4 s. Find v.","12 m/s"],["If u=5 m/s, a=2 m/s² and t=3 s, find v.","11 m/s"]]},
+  "newton":{title:"Newton's Laws — Force & Acceleration",concept:"Net force changes velocity. For a body of mass m, F_net = ma.",formulas:["F_net = ma","Weight = mg"],example:"A 5 kg block has net force 20 N. Its acceleration is 20/5 = 4 m/s².",practice:[["A 2 kg object has net force 10 N. Find acceleration.","5 m/s²"],["A body has constant velocity. What is its net force?","0 N"]]}
+ },
+ "chemistry":{
+  "mole":{title:"Mole Concept",concept:"A mole is a counting unit. One mole contains 6.022×10²³ entities. The number of moles is n = mass/molar mass.",formulas:["n = mass / molar mass","N = nN_A"],example:"18 g of water has 1 mol because its molar mass is 18 g/mol.",practice:[["How many moles are in 44 g CO₂?","1 mol"],["How many particles are in 2 mol?","1.2044×10²⁴"]]},
+  "atomic":{title:"Atomic Structure — Core Ideas",concept:"Atoms contain a nucleus with protons and neutrons, surrounded by electrons. Atomic number Z equals the number of protons.",formulas:["Z = number of protons","Mass number A = protons + neutrons"],example:"For an atom with Z=8 and A=16, protons=8 and neutrons=8.",practice:[["An atom has Z=11. How many protons does it have?","11"],["If A=23 and Z=11, how many neutrons?","12"]]}
+ },
+ "maths":{
+  "quadratic":{title:"Quadratic Equations",concept:"A quadratic equation has the form ax²+bx+c=0. Its roots can be found by factorisation or the quadratic formula.",formulas:["x = (-b ± √(b²-4ac))/(2a)","Sum of roots = -b/a","Product of roots = c/a"],example:"x²−5x+6=0 factors as (x−2)(x−3), so roots are 2 and 3.",practice:[["Solve x²−7x+12=0.","3, 4"],["For x²+4x+4=0, what is the nature of roots?","Equal real roots"]]},
+  "trigonometry":{title:"Trigonometry — Core Identities",concept:"Trigonometric ratios connect angles and sides in right triangles and satisfy identities useful in algebraic simplification.",formulas:["sin²θ + cos²θ = 1","tanθ = sinθ/cosθ"],example:"sin 30° = 1/2 and cos 60° = 1/2.",practice:[["Simplify sin²θ + cos²θ.","1"],["If tan θ=1 and θ is acute, find θ.","45°"]]}
+ }
+};
+function subjectKey(s){
+ const x=(s||"").toLowerCase();
+ if(x.includes("physics"))return "physics";
+ if(x.includes("chem"))return "chemistry";
+ if(x.includes("math"))return "maths";
+ return x;
+}
+function lessonFor(subject){
+ const k=subjectKey(subject), bank=lessonBank[k]||{};
+ const topicMap={physics:["kinematics","newton"],chemistry:["mole","atomic"],maths:["quadratic","trigonometry"]};
+ const topics=topicMap[k]||[];
+ const day=cycleDay(), topic=topics[(day-1)%Math.max(1,topics.length)];
+ if(bank[topic]) return bank[topic];
+ return {title:`${subject} — Guided Study`,concept:`Study the current ${subject} topic actively: learn the definition or core idea, write the key rules/formulas in your own words, then solve practice questions without looking at the answer.`,formulas:["Key definition / rule","Key formula or method","One common mistake"],example:"Open your class notes/textbook for today's exact chapter, then use the practice check below to verify recall.",practice:[[`Write the main definition/rule you learned in today's ${subject} session.`,`Self-check`],[`Solve one representative problem from today's ${subject} topic without looking at the solution.`,`Self-check`]]};
+}
+function taskForDay(subject,i,day){
+ const p=profile(),weak=(p.weak||"").toLowerCase().split(",").map(x=>x.trim()).filter(Boolean);
+ const isWeak=weak.some(w=>subject.toLowerCase().includes(w));
+ const l=lessonFor(subject);
+ return {id:`d${day}_${i}`,subject,title:(isWeak?"Focus: ":"Study: ")+subject+" — "+l.title.split(" — ").pop(),meta:(isWeak?"Weak-area focus • ":"")+"Learn → example → practice • "+Math.max(10,Math.round(minutes(p.time)*(isWeak?1.5:1)/(p.subjects.reduce((a,x)=>a+(weak.some(w=>x.toLowerCase().includes(w))?1.5:1),0)||1)))+" min",lesson:l};
+}
+function allTasks(){
+ const p=profile();if(!p)return [];
+ const day=cycleDay();
+ return (p.subjects||[]).map((s,i)=>taskForDay(s,i,day));
+}
+function doneCount(){
+ const d=userData(),tasks=d.tasks||{};
+ return Object.keys(tasks).filter(k=>tasks[k]===true).length;
+}
+function progress(){
+ const p=profile();if(!p)return 0;
+ const day=cycleDay(),expected=Math.max(1,(p.subjects||[]).length*day);
+ return Math.min(100,Math.round(doneCount()/expected*100));
+}
+function openStudySession(taskId){
+ const task=allTasks().find(t=>t.id===taskId); if(!task)return;
+ window._activeTask=task;
+ $("sessionTitle").textContent=task.title;
+ $("sessionMeta").textContent=`Day ${cycleDay()} • ${task.meta}`;
+ const l=task.lesson;
+ $("sessionBody").innerHTML=`
+  <div class="lesson-block"><h3>1. Learn</h3><p>${esc(l.concept)}</p></div>
+  <div class="lesson-block"><h3>2. Key points</h3>${l.formulas.map(x=>`<div>• ${esc(x)}</div>`).join("")}</div>
+  <div class="lesson-block"><h3>3. Worked example</h3><p>${esc(l.example)}</p></div>
+  <div class="lesson-block"><h3>4. Practice</h3>${l.practice.map((x,i)=>`<div class="practice-q"><b>${i+1}. ${esc(x[0])}</b><input id="practice_${i}" placeholder="Write your answer"><button class="btn" style="margin-top:7px" onclick="checkPractice(${i})">Check</button><div id="practiceResult_${i}" class="muted small" style="margin-top:6px"></div></div>`).join("")}</div>
+  <div class="notice" style="margin-top:12px">Finish the lesson and practice before completing the task. NEXORA will record this session in your progress.</div>
+  <div class="session-actions"><button class="btn primary" onclick="completeStudyTask()">✓ Complete study session</button><button class="btn" onclick="setTimer(${Math.min(90,Math.max(10,parseInt(task.meta)||25))})">⏱ Start focus timer</button></div>`;
+ $("studySessionModal").classList.add("open");
+}
+function checkPractice(i){
+ const t=window._activeTask;if(!t)return;
+ const val=$(`practice_${i}`).value.trim().toLowerCase(),ans=t.lesson.practice[i][1].toLowerCase();
+ const ok=val===ans||val.includes(ans)||ans.includes(val)&&val.length>2;
+ $(`practiceResult_${i}`).textContent=ok?"✓ Correct":"Not matched exactly — review the worked example and try again.";
+ $(`practiceResult_${i}`).style.color=ok?"var(--accent)":"";
+}
+function completeStudyTask(){
+ const t=window._activeTask;if(!t)return;
+ updateUserData(d=>{d.tasks=d.tasks||{};d.tasks[t.id]=true;d.sessions=d.sessions||[];d.sessions.unshift({id:t.id,title:t.title,day:cycleDay(),date:new Date().toISOString()});return d});
+ closeStudySession();renderAll();toast("Study session completed ✓");
+}
+function closeStudySession(){ $("studySessionModal").classList.remove("open");window._activeTask=null; }
 function renderHome(){
- const u=current(),p=profile();if(!u)return;$('appUser').textContent=u.email;$('welcome').textContent="Welcome, "+(u.name||"Student").split(" ")[0]+" 👋";
- if(!p){$('studentLine').textContent="Create your student profile to generate your plan.";$('homeGoal').textContent="Set your first study goal";$('homeGoalMeta').textContent="Your timetable, roadmap and tasks will appear here.";$('statProgress').textContent="0%";$('statDone').textContent="0";$('statFocus').textContent="Balanced";return}
- ensureDay();$('studentLine').textContent=[p.className,p.board,p.stream].filter(Boolean).join(" • ");$('homeGoal').textContent=p.goalText||"Study goal";$('homeGoalMeta').textContent=[p.className,p.stream,p.exam].filter(Boolean).join(" • ");$('statProgress').textContent=progress()+"%";$('statDone').textContent=completedTaskCount();$('statFocus').textContent=(p.weak||"Balanced").split(",")[0].trim()||"Balanced";
+ const u=current(),p=profile();if(!u)return;
+ $("appUser").textContent=u.email;$("welcome").textContent="Welcome, "+(u.name||"Student").split(" ")[0]+" 👋";
+ if(!p){$("studentLine").textContent="Create your student profile to generate your plan.";$("homeGoal").textContent="Set your first study goal";$("homeGoalMeta").textContent="Your timetable, roadmap and tasks will appear here.";$("statProgress").textContent="0%";$("statDone").textContent="0";$("statFocus").textContent="Balanced";return}
+ $("studentLine").textContent=[p.className,p.board,p.stream].filter(Boolean).join(" • ");
+ $("homeGoal").textContent=p.goalText;$("homeGoalMeta").textContent=[p.className,p.stream,p.exam].filter(Boolean).join(" • ");
+ $("statProgress").textContent=progress()+"%";$("statDone").textContent=doneCount();$("statFocus").textContent=(userData().focusSessions||[]).length?((userData().focusSessions||[]).reduce((a,x)=>a+(x.minutes||0),0)+" min focused"):(p.weak||"Balanced").split(",")[0].trim()||"Balanced";
 }
-function maybeAdvanceDay(){
- const p=profile();if(!p)return false;ensureDay();const d=userData(),key="cycle_"+(Number(p.currentDay)||1),day=d.tasks[key]||{};
- const allDone=Object.values(day).length>0&&Object.values(day).every(t=>t.done);
- if(allDone&&(Number(p.currentDay)||1)<21){p.currentDay=(Number(p.currentDay)||1)+1;p.cycleStart=new Date().toISOString();saveState();ensureDay();return true}
- return false;
-}
-function toggleTask(id,val){
- const p=profile();if(!p)return;ensureDay();const key="cycle_"+(Number(p.currentDay)||1),day=userData().tasks[key]||{},task=day[id];
- if(task?.type==="test"&&!task.done&&val){toast("Take the progress test first. The test unlocks this task.");renderToday();return}
- updateUserData(d=>{d.tasks=d.tasks||{};const currentDayTasks=d.tasks[key]||{};if(currentDayTasks[id])currentDayTasks[id].done=!!val;d.tasks[key]=currentDayTasks;return d});
- const advanced=maybeAdvanceDay();if(advanced)toast("Day complete 🎉 — Day "+cycleDay()+" is now unlocked!");else if(val)toast("Task completed ✓");renderAll();
-}
+
 function renderToday(){
- const box=$("todayTasks");if(!profile()){box.innerHTML='<div class="muted">Create your student profile first.</div>';$("todayProgress").style.width="0%";return}
- ensureDay();const tasks=currentTasks();const day=cycleDay(),dp=dayProgress(),testCompleted=(userData().tests||[]).some(x=>x.day===day);
- box.innerHTML=`<div class="notice"><b>Day ${day} of 21 • ${phase()}</b><br><span class="small muted">Finish today's work to unlock the next day. Tomorrow's tasks are generated automatically.</span></div>`+tasks.map(t=>{const locked=t.type==="test"&&!testCompleted&&!t.done;return `<label class="task ${t.done?"done":""}"><input type="checkbox" ${t.done?"checked":""} ${locked?"disabled":""} onchange="toggleTask('${t.id}',this.checked)"><span><span class="task-title">${esc(t.title)}</span><div class="muted small">${esc(t.meta)}</div>${t.type==="test"?`<button type="button" class="btn small ${testCompleted?'primary':''}" style="margin-top:8px" onclick="event.preventDefault();openTest()">${testCompleted?'✓ Test completed':'Open test'}</button>`:""}</span></label>`}).join("");
- $("todayProgress").style.width=dp+"%";$("todayProgressText").textContent=`Today: ${tasks.filter(t=>t.done).length}/${tasks.length} tasks complete • Cycle: ${progress()}% • Day ${day}/21`;
+ const box=$("todayTasks");if(!profile()){box.innerHTML='<div class="muted">Create your student profile first.</div>';return}
+ const d=userData(),done=d.tasks||{},tasks=allTasks(),day=cycleDay();
+ box.innerHTML=tasks.map(t=>`<div class="task ${done[t.id]?"done":""}">
+   <button class="task-open" onclick="openStudySession('${t.id}')"><span class="task-title">${done[t.id]?"✓ ":""}${esc(t.title)}</span><div class="muted small">${esc(t.meta)} • ${done[t.id]?"Completed — open again":"Open study session →"}</div></button>
+  </div>`).join("");
+ if(day===7||day===14||day===21){
+   box.innerHTML+=`<div class="task"><button class="task-open" onclick="openProgressTest()"><span class="task-title">📝 Day ${day} Progress Test</span><div class="muted small">Take the test to complete today's assessment and record mistakes.</div></button></div>`;
+ }
+ const completedToday=tasks.filter(t=>done[t.id]).length;
+ $("todayProgress").style.width=Math.round(completedToday/Math.max(1,tasks.length)*100)+"%";
+ $("todayProgressText").textContent=`Day ${day}/21 • ${completedToday}/${tasks.length} study sessions complete • ${progress()}% cycle progress.`;
 }
+function toggleTask(id,val){ /* legacy compatibility: tasks are now completed through Study Session */ openStudySession(id); }
+
+
 function renderTimetable(){
  const p=profile(),box=$("timetable");if(!p){box.innerHTML='<div class="card section-card">Create your profile first.</div>';return}
- const subs=p.subjects||[],total=minutes(p.time),weights=subjectWeights(p),sum=weights.reduce((a,b)=>a+b,0),days=["Monday","Tuesday","Wednesday","Thursday","Friday","Saturday","Sunday"],today=new Date().toLocaleDateString('en-US',{weekday:'long'}),d=userData();
- box.innerHTML=days.map((day,di)=>{let items=subs.map((s,i)=>{let share=Math.max(10,Math.round(total*weights[i]/sum)),key=day+"_"+s,done=!!(d.timetableDone||{})[key];return `<div class="slot"><button class="btn small ${done?'primary':''}" onclick="toggleSlot('${esc(key)}')">${done?'✓ Done':'○ Mark done'}</button> 📚 <b>${esc(s)}</b> — ${share} min${isWeak(s,p)?' • weak-topic focus':''}</div>`}).join("");if(di===6)items+='<div class="slot">📝 <b>Weekly review</b> — check mistakes and adjust weak topics</div>';return `<div class="day card" style="${day===today?'border-color:var(--accent)':''}"><h3>${day}${day===today?' • Today':''}</h3>${items}</div>`}).join("");
+ const subs=p.subjects||[],total=minutes(p.time),weak=(p.weak||"").toLowerCase().split(",").map(x=>x.trim()).filter(Boolean);
+ const days=["Monday","Tuesday","Wednesday","Thursday","Friday","Saturday","Sunday"],today=new Date().toLocaleDateString('en-US',{weekday:'long'}),d=userData();
+ box.innerHTML=days.map((day,di)=>{
+   const items=subs.map((s,i)=>{let w=weak.some(x=>s.toLowerCase().includes(x)),share=Math.max(10,Math.round(total*(w?1.5:1)/(subs.reduce((a,x)=>a+(weak.some(y=>x.toLowerCase().includes(y))?1.5:1),0)||1)));let key=`${cycleDay()}_${day}_${s}`,done=!!(d.timetableDone||{})[key];return `<div class="slot"><button class="btn small ${done?'primary':''}" onclick="toggleSlot('${esc(key)}')">${done?'✓ Done':'Mark session done'}</button> 📚 <b>${esc(s)}</b> — ${share} min${w?' • weak-area focus':''}</div>`}).join("");
+   if(di===6)items+=`<div class="slot">📝 <b>${[7,14,21].includes(cycleDay())?'Progress test today':'Weekly review'}</b> — ${[7,14,21].includes(cycleDay())?'Open Today to take the test':'Review mistakes and unfinished sessions'}</div>`;
+   return `<div class="day card" style="${day===today?'border-color:var(--accent)':''}"><h3>${day}${day===today?' • Today':''}</h3>${items}</div>`;
+ }).join("");
 }
 function toggleSlot(key){updateUserData(d=>{d.timetableDone=d.timetableDone||{};d.timetableDone[key]=!d.timetableDone[key];return d});renderTimetable();toast("Timetable updated")}
+
 function renderRoadmap(){
- const p=profile(),box=$("roadmap");if(!p){box.innerHTML='<div class="card section-card">Create your profile first.</div>';$("history").innerHTML="";return}
- const day=cycleDay(),steps=[
- ["1","Foundation","Days 1–7","Build routine, learn core concepts and complete daily practice.",day>=1&&day<=7],
- ["2","Practice","Days 8–14","Increase question practice and spend extra time on weak topics.",day>=8&&day<=14],
- ["3","Test & Improve","Days 15–21","Take tests, analyse mistakes and revise weak areas.",day>=15],
- ["4","Next Cycle","After Day 21","Use your score, mistakes and unfinished work to build the next cycle.",false]
- ];
- box.innerHTML=steps.map(x=>`<div class="road card" style="${x[4]?'border-color:var(--accent)':''}"><div class="road-num">${x[0]}</div><div><b>${x[1]} ${x[4]?'• Current':''}</b><div class="muted small" style="margin-top:5px">${x[2]}: ${x[3]}</div></div></div>`).join("");
- const h=userData().history||[];$('history').innerHTML=`<h3>Cycle status</h3><p class="muted">Day ${day}/21 • ${phase()} • ${progress()}% overall task progress.</p>`+(h.length?'<h3 style="margin-top:18px">Completed goals</h3>'+h.map(x=>`<div class="profile-row"><span>${esc(x.goal)}</span><b>✓ ${new Date(x.date).toLocaleDateString()}</b></div>`).join(""):'<p class="muted">No completed goals yet.</p>');
+ const p=profile(),day=cycleDay();$("roadmap").innerHTML=p?[
+  ["1","Foundation","Days 1–7: learn core concepts, complete guided study sessions and build routine.",day<=7],
+  ["2","Practice","Days 8–14: increase practice and focus on weak areas.",day>=8&&day<=14],
+  ["3","Test & Improve","Days 15–21: revise mistakes and strengthen weak topics.",day>=15],
+  ["4","Next Cycle","After Day 21: use test results and unfinished work for the next cycle.",false]
+ ].map(x=>`<div class="road card" style="${x[3]?'border-color:var(--accent)':''}"><div class="road-num">${x[0]}</div><div><b>${x[1]} ${x[3]?'• Current':''}</b><div class="muted small" style="margin-top:5px">${x[2]}</div></div></div>`).join(""):'<div class="card section-card">Create your profile first.</div>';
+ const h=userData().history||[];$("history").innerHTML=`<h3>Cycle status</h3><p class="muted">Day ${day}/21 • ${phase()} • ${progress()}% progress.</p><h3 style="margin-top:16px">Completed goals</h3>`+(h.length?h.map(x=>`<div class="profile-row"><span>${esc(x.goal)}</span><b>✓ ${new Date(x.date).toLocaleDateString()}</b></div>`).join(""):'<p class="muted">No completed goals yet.</p>');
 }
-function uResetTasks(){updateUserData(d=>{d.tasks={};d.timetableDone={};return d})}
-function completeGoal(){const p=profile();if(!p){toast("Create a goal first.");return}if(cycleDay()<21||progress()<80){if(!confirm("This cycle is not finished yet. Mark the goal complete anyway?"))return}updateUserData(d=>{d.history=d.history||[];d.history.unshift({goal:p.goalText||"Goal",date:new Date().toISOString()});return d});p.goalDone=true;p.cycleStart=new Date().toISOString();p.currentDay=1;uResetTasks();saveState();toast("Goal completed. A fresh 21-day cycle is ready.");renderAll();go("home")}
+function completeGoal(){
+ const p=profile();if(!p){toast("Create a goal first.");return}
+ if(!confirm("Mark this goal as completed? The ₹1499 plan is treated as one goal cycle."))return;
+ updateUserData(d=>{d.history=d.history||[];d.history.unshift({goal:p.goalText,date:new Date().toISOString()});return d});
+ p.goalDone=true;saveState();toast("Goal completed. Now edit your profile to set a new goal.");renderAll();go("profile");
+}
 
 function setTimer(min){pauseTimer();timerInitial=Math.max(5,Math.min(180,Number(min)))*60;timerSec=timerInitial;updateTimer()}
 function setCustomTimer(){let n=Number($("customTimer").value);if(!n||n<5||n>180){toast("Choose 5–180 minutes.");return}setTimer(n)}
 function updateTimer(){$("timer").textContent=String(Math.floor(timerSec/60)).padStart(2,"0")+":"+String(timerSec%60).padStart(2,"0")}
-function startTimer(){if(timerId)return;timerId=setInterval(()=>{if(timerSec<=0){pauseTimer();toast("Focus session complete 🎉");logStudy();return}timerSec--;updateTimer()},1000)}
+function startTimer(){if(timerId)return;timerId=setInterval(()=>{if(timerSec<=0){pauseTimer();updateUserData(d=>{d.focusSessions=d.focusSessions||[];d.focusSessions.unshift({minutes:Math.round(timerInitial/60),date:new Date().toISOString()});return d});toast("Focus session complete 🎉");renderAll();return}timerSec--;updateTimer()},1000)}
 function pauseTimer(){if(timerId){clearInterval(timerId);timerId=null}}
 function resetTimer(){pauseTimer();timerSec=timerInitial;updateTimer()}
-function logStudy(){const p=profile();if(!p)return;const mins=Math.max(1,Math.round(timerInitial/60));updateUserData(d=>{d.studyLog=d.studyLog||[];d.studyLog.unshift({date:new Date().toISOString(),minutes:mins,subject:p.subjects?.[0]||"General"});return d});renderAll()}
 function previewPhoto(){const f=$("doubtPhoto").files[0],img=$("doubtPreview");if(!f){img.classList.add("hidden");return}const r=new FileReader();r.onload=()=>{img.src=r.result;img.classList.remove("hidden")};r.readAsDataURL(f)}
-function saveDoubt(){const text=$("doubtText").value.trim(),f=$("doubtPhoto").files[0];if(!text&&!f){toast("Type a doubt or add a photo.");return}const save=photo=>updateUserData(d=>{d.doubts=d.doubts||[];d.doubts.unshift({text,photo,date:new Date().toISOString(),status:"open",solution:""});return d});if(f){const r=new FileReader();r.onload=()=>{save(r.result);clearDoubtForm();renderStudy();toast("Doubt saved — open it to write/verify a solution.")};r.readAsDataURL(f)}else{save("");clearDoubtForm();renderStudy();toast("Doubt saved")}}
-function clearDoubtForm(){$("doubtText").value="";$('doubtPhoto').value="";$('doubtPreview').classList.add('hidden')}
-function saveSolution(i){const input=$("solution_"+i),val=input.value.trim();if(!val){toast("Write a solution first.");return}updateUserData(d=>{if(d.doubts?.[i]){d.doubts[i].solution=val;d.doubts[i].status="solved"}return d});renderStudy();toast("Solution saved ✓")}
-function saveNote(){const t=$("studyNote").value.trim();if(!t){toast("Write a note first.");return}updateUserData(d=>{d.notes=d.notes||[];d.notes.unshift({text:t,date:new Date().toISOString()});return d});$("studyNote").value="";renderStudy();toast("Note saved")}
-function renderStudy(){
- updateTimer();const d=userData();
- $("doubts").innerHTML=(d.doubts||[]).slice(0,10).map((x,i)=>`<div class="card" style="padding:12px;margin-top:8px"><b>Doubt ${i+1}</b> <span class="muted small">${x.status==='solved'?'• Solved':'• Open'}</span><div class="muted small">${new Date(x.date).toLocaleString()}</div>${x.text?`<p>${esc(x.text)}</p>`:""}${x.photo?`<img src="${x.photo}" style="max-width:100%;max-height:180px;border-radius:10px">`:""}<textarea id="solution_${i}" placeholder="Write your solution / corrected answer / what you learned..." style="min-height:80px;margin-top:8px">${esc(x.solution||"")}</textarea><button class="btn small primary" style="margin-top:7px" onclick="saveSolution(${i})">Save solution</button></div>`).join("")||'<div class="muted small">No saved doubts.</div>';
- $("notes").innerHTML=(d.notes||[]).slice(0,10).map(x=>`<div class="card" style="padding:12px;margin-top:8px"><div class="muted small">${new Date(x.date).toLocaleString()}</div>${esc(x.text)}</div>`).join("")||'<div class="muted small">No saved notes.</div>';
-}
 
-// Offline practice/test bank. These are explicitly practice questions, not claimed as official PYQs.
+function saveDoubt(){
+ const text=$("doubtText").value.trim(),f=$("doubtPhoto").files[0];if(!text&&!f){toast("Type a doubt or add a photo.");return}
+ const save=photo=>updateUserData(d=>{d.doubts=d.doubts||[];d.doubts.unshift({text,photo,solution:"",date:new Date().toISOString()});return d});
+ if(f){const r=new FileReader();r.onload=()=>{save(r.result);$("doubtText").value="";$("doubtPhoto").value="";$("doubtPreview").classList.add("hidden");renderStudy();toast("Doubt saved. A solution requires the answer backend.");};r.readAsDataURL(f)}
+ else{save("");$("doubtText").value="";renderStudy();toast("Doubt saved. A solution requires the answer backend.");}
+}
+function saveNote(){const t=$("studyNote").value.trim();if(!t){toast("Write a note first.");return}updateUserData(d=>{d.notes=d.notes||[];d.notes.unshift({text:t,date:new Date().toISOString()});return d});$("studyNote").value="";renderStudy();toast("Note saved")}
+
+function renderStudy(){
+ $("timer").textContent=String(Math.floor(timerSec/60)).padStart(2,"0")+":"+String(timerSec%60).padStart(2,"0");
+ const d=userData();
+ $("doubts").innerHTML=(d.doubts||[]).slice(0,8).map((x,i)=>`<div class="card" style="padding:12px;margin-top:8px"><b>Doubt ${i+1}</b><div class="muted small">${new Date(x.date).toLocaleString()}</div>${x.text?`<p>${esc(x.text)}</p>`:""}${x.photo?`<img src="${x.photo}" style="max-width:100%;max-height:180px;border-radius:10px">`:""}<div class="lesson-block"><b>Solution status</b><p class="muted small">${x.solution?esc(x.solution):"No automatic solution yet. This offline build saves the doubt; connect the NEXORA answer backend to generate an actual AI solution."}</p></div></div>`).join("")||'<div class="muted small">No saved doubts.</div>';
+ $("notes").innerHTML=(d.notes||[]).slice(0,8).map(x=>`<div class="card" style="padding:12px;margin-top:8px"><div class="muted small">${new Date(x.date).toLocaleString()}</div>${esc(x.text)}</div>`).join("")||'<div class="muted small">No saved notes.</div>';
+}
 const bank={
- "newton's laws":[["A 5 kg block has net force 20 N. Find acceleration.",["2 m/s²","4 m/s²","10 m/s²","25 m/s²"],1,"a=F/m"],["A body moves with constant velocity. What is its net force?",["0 N","1 N","Depends on mass","Cannot say"],0,"constant velocity means zero acceleration"],["10 N and 6 N act oppositely on 2 kg. Find acceleration.",["1 m/s²","2 m/s²","4 m/s²","8 m/s²"],1,"net force=4 N; a=4/2"]],
- "kinematics":[["A car starts from rest with a=2 m/s² for 5 s. Find final velocity.",["5 m/s","7 m/s","10 m/s","12 m/s"],2,"v=u+at"],["u=5 m/s, a=2 m/s², t=4 s. Find displacement.",["28 m","36 m","40 m","52 m"],1,"s=ut+½at²"],["What does zero acceleration mean for velocity?",["Velocity is always zero","Velocity remains constant","Speed doubles","Direction must change"],1,"acceleration is the rate of change of velocity"]],
- "quadratic equations":[["Solve x²−5x+6=0.",["x=1,6","x=2,3","x=-2,-3","x=0,6"],1,"factor into (x−2)(x−3)"],["For x²+4x+4=0, nature of roots?",["No real roots","Equal real roots","Distinct real roots","One positive and one negative"],1,"discriminant is zero"],["For x²−7x+10=0, sum of roots?",["-7","5","7","10"],2,"sum = −b/a"]],
- "trigonometry":[["Find sin 30°.",["0","1/2","√3/2","1"],1,"standard value"],["If tan θ=1 and θ is acute, θ=?",["30°","45°","60°","90°"],1,"tan 45°=1"],["Simplify sin²θ+cos²θ.",["0","1/2","1","2"],2,"fundamental identity"]],
- "mole concept":[["Particles in one mole?",["6.022×10²³","3.011×10²³","9.8×10²³","1.602×10⁻¹⁹"],0,"Avogadro constant"],["Moles in 18 g water if molar mass is 18 g/mol?",["0.5 mol","1 mol","2 mol","18 mol"],1,"n=mass/molar mass"],["Molar mass of CO₂?",["28 g/mol","32 g/mol","40 g/mol","44 g/mol"],3,"12+2×16"]]
+ "newton's laws":[["A 5 kg block has net force 20 N. Find acceleration.","4 m/s²","a=F/m"],["A body moves with constant velocity. What is its net force?","0 N","constant velocity means zero acceleration"],["10 N and 6 N act oppositely on 2 kg. Find acceleration.","2 m/s²","net force=4 N; a=4/2"]],
+ "kinematics":[["A car starts from rest with a=2 m/s² for 5 s. Find final velocity.","10 m/s","v=u+at"],["u=5 m/s, a=2 m/s², t=4 s. Find displacement.","36 m","s=ut+½at²"],["What does zero acceleration mean for velocity?","Velocity remains constant.","acceleration is the rate of change of velocity"]],
+ "quadratic equations":[["Solve x²−5x+6=0.","x=2,3","factor into (x−2)(x−3)"],["For x²+4x+4=0, nature of roots?","Equal real roots","discriminant is zero"],["For x²−7x+10=0, sum of roots?","7","sum = −b/a"]],
+ "trigonometry":[["Find sin 30°.","1/2","standard value"],["If tan θ=1 and θ is acute, θ=?","45°","tan 45°=1"],["Simplify sin²θ+cos²θ.","1","fundamental identity"]],
+ "mole concept":[["Particles in one mole?","6.022×10²³","Avogadro constant"],["Moles in 18 g water if molar mass is 18 g/mol?","1 mol","n=mass/molar mass"],["Molar mass of CO₂?","44 g/mol","12+2×16"]]
 };
-function topicKey(topic){const t=topic.toLowerCase();return Object.keys(bank).find(k=>t.includes(k)||k.includes(t))}
 function generateQuestions(){
  const topic=$("qTopic").value.trim(),sub=$("qSubject").value.trim()||"the subject",count=Number($("qCount").value);if(!topic){toast("Enter a topic first.");return}
- const key=topicKey(topic),raw=key?bank[key]:null;let qs=[];
- if(raw){while(qs.length<count)qs=qs.concat(raw.map(x=>({q:x[0],opts:x[1],correct:x[2],e:x[3]})));qs=qs.slice(0,count).sort(()=>Math.random()-.5)}else{const prompts=[`Define ${topic} and state its most important formula, law or property.`,`Explain the main idea of ${topic} in 2–3 lines and give one example.`,`Write one common mistake students make while studying ${topic}.`,`Create a short ${sub} practice problem based on ${topic}.`,`What prerequisite concept is important before studying ${topic}?`,`Give one real-life application of ${topic}.`,`Compare two closely related ideas inside ${topic}.`,`Write a one-line revision question about ${topic}.`,`What diagram or graph could help explain ${topic}?`,`Write a test-style question on ${topic}.`];qs=prompts.slice(0,count).map(q=>({q,a:"Use your textbook/class notes to verify this practice prompt.",e:"Generated practice prompt — not a verified PYQ."}))}
+ const key=Object.keys(bank).find(k=>topic.toLowerCase().includes(k)||k.includes(topic.toLowerCase()));
+ let qs=key?bank[key].map(x=>({q:x[0],a:x[1],e:x[2]})):[];
+ if(!qs.length){
+   const prompts=[
+    `Define ${topic} and state its most important formula, law or property.`,
+    `Explain the main idea of ${topic} in 2–3 lines and give one example.`,
+    `Write one common mistake students make while studying ${topic}.`,
+    `Create a short ${sub} practice problem based on ${topic} and list the steps needed to solve it.`,
+    `What prerequisite concept is important before studying ${topic}? Explain briefly.`,
+    `Give one real-life application of ${topic}.`,
+    `Compare two closely related ideas inside ${topic}.`,
+    `Write a one-line revision question about ${topic} and its answer.`,
+    `What diagram or graph could help explain ${topic}?`,
+    `Write a test-style question on ${topic}.`
+   ];
+   qs=prompts.map(q=>({q,a:"Use your textbook/class notes to verify this practice prompt.",e:"Generated practice prompt — not a verified PYQ."}));
+ }
+ while(qs.length<count)qs=qs.concat(qs.slice(0,Math.min(count-qs.length,qs.length)));
+ qs=qs.slice(0,count).sort(()=>Math.random()-.5);
  $("qStatus").textContent=key?"Practice set from NEXORA's built-in topic bank.":"Generated practice set. Not verified PYQs.";
- $("questions").innerHTML=qs.map((x,i)=>`<div class="question"><b>${i+1}. ${esc(x.q)}</b>${x.opts?`<div style="display:grid;gap:6px;margin-top:8px">${x.opts.map((o,j)=>`<label class="check"><input type="radio" name="practice${i}" value="${j}"> ${esc(o)}</label>`).join("")}</div><button class="btn small" style="margin-top:8px" onclick="checkPractice(${i},${x.correct})">Check</button><div id="pc_${i}" class="answer hidden"></div>`:`<div class="answer">${esc(x.a)}<br><span class="muted">${esc(x.e)}</span></div>`}</div>`).join("");
+ $("questions").innerHTML=qs.map((x,i)=>`<div class="question"><b>${i+1}. ${esc(x.q)}</b><button class="btn" onclick="this.nextElementSibling.classList.toggle('hidden')">Show answer</button><div class="answer hidden"><b>Answer:</b> ${esc(x.a)}<br><span class="muted">${esc(x.e)}</span></div></div>`).join("");
  updateUserData(d=>{d.questions=qs;return d});
 }
-function checkPractice(i,correct){const el=document.querySelector(`input[name="practice${i}"]:checked`),out=$("pc_"+i);if(!el){toast("Choose an answer first.");return}const ok=Number(el.value)===correct;out.textContent=ok?"✓ Correct":"✗ Not correct — review the concept.";out.classList.remove("hidden");out.style.border=ok?"1px solid var(--success)":"1px solid var(--danger)"}
 
-function openTest(){const p=profile();if(!p){toast("Create your profile first.");return}const topic=p.weak?.split(',')[0]?.trim()||p.subjects?.[0]||"Newton's Laws";const key=topicKey(topic)||Object.keys(bank).find(k=>p.subjects?.some(s=>k.includes(s.toLowerCase().split(' ')[0])))||"newton's laws";const qs=bank[key].map(x=>({q:x[0],opts:x[1],correct:x[2],e:x[3]})).sort(()=>Math.random()-.5).slice(0,5);const box=$("questions");go("study");$("qStatus").textContent=`Progress Test • Day ${cycleDay()} • ${key}`;box.innerHTML=`<div class="notice"><b>Progress Test</b><br>Answer all 5 questions, then submit. Your score and mistakes will be saved.</div>`+qs.map((x,i)=>`<div class="question"><b>${i+1}. ${esc(x.q)}</b><div style="display:grid;gap:6px;margin-top:8px">${x.opts.map((o,j)=>`<label class="check"><input type="radio" name="test${i}" value="${j}"> ${esc(o)}</label>`).join("")}</div></div>`).join("")+`<button class="btn primary" style="width:100%;margin-top:12px" onclick='submitTest(${JSON.stringify(qs).replace(/</g,"\\u003c")})'>Submit test</button>`}
-function submitTest(qs){
- let score=0,miss=[];qs.forEach((x,i)=>{const a=document.querySelector(`input[name="test${i}"]:checked`);if(a&&Number(a.value)===x.correct)score++;else miss.push(x.q)});
- if(qs.some((x,i)=>!document.querySelector(`input[name="test${i}"]:checked`))){toast("Answer all questions before submitting.");return}
- const dayNo=cycleDay();updateUserData(d=>{d.tests=d.tests||[];d.tests.unshift({date:new Date().toISOString(),day:dayNo,score,total:qs.length,mistakes:miss});d.mistakes=(d.mistakes||[]).concat(miss.map(q=>({q,date:new Date().toISOString()}))).slice(-50);d.tasks=d.tasks||{};const key="cycle_"+dayNo;d.tasks[key]=d.tasks[key]||{};const tk=Object.keys(d.tasks[key]).find(k=>d.tasks[key][k].type==="test");if(tk)d.tasks[key][tk].done=true;return d});
- const advanced=maybeAdvanceDay();toast(`Test submitted: ${score}/${qs.length} 🎯`+(advanced?" • Next day unlocked!":""));renderAll();go("today")
+function testQuestions(){
+ return [
+  ["A body starts from rest with acceleration 2 m/s² for 5 s. Its final velocity is?","10 m/s",["5 m/s","10 m/s","15 m/s","20 m/s"]],
+  ["If net force on a body is zero, its acceleration is?","0",["0","1 m/s²","9.8 m/s²","Cannot say"]],
+  ["One mole contains approximately?","6.022×10²³",["6.022×10²³","3.14×10²³","9.8×10²³","1.0×10²³"]],
+  ["Roots of x²−5x+6=0 are?","2, 3",["1, 6","2, 3","-2, -3","3, 5"]],
+  ["sin²θ + cos²θ equals?","1",["0","1","2","sinθ"]]
+ ];
 }
+function openProgressTest(){
+ const day=cycleDay(),qs=testQuestions();
+ $("sessionTitle").textContent=`Day ${day} Progress Test`;
+ $("sessionMeta").textContent="5 questions • Submit to record your score and mistakes";
+ $("sessionBody").innerHTML=`<div class="notice">This is a NEXORA practice test. Questions are original practice questions, not claimed as verified PYQs.</div>`+
+ qs.map((x,i)=>`<div class="practice-q"><b>${i+1}. ${esc(x[0])}</b>${x[2].map(o=>`<label class="test-option"><input type="radio" name="test_${i}" value="${esc(o)}">${esc(o)}</label>`).join("")}</div>`).join("")+
+ `<div class="session-actions"><button class="btn primary" onclick="submitProgressTest()">Submit test</button></div><div id="testResult"></div>`;
+ $("studySessionModal").classList.add("open");
+}
+function submitProgressTest(){
+ const qs=testQuestions(),day=cycleDay();let score=0,mistakes=[];
+ qs.forEach((x,i)=>{const el=document.querySelector(`input[name="test_${i}"]:checked`);if(el&&el.value===x[1])score++;else mistakes.push({question:x[0],correct:x[1],chosen:el?el.value:"Not answered"});});
+ updateUserData(d=>{d.tests=d.tests||[];d.tests.unshift({day,score,total:qs.length,mistakes,date:new Date().toISOString()});d.testDays=d.testDays||{};d.testDays[day]=true;return d});
+ $("testResult").innerHTML=`<div class="lesson-block"><h3>Score: ${score}/${qs.length}</h3><p>${mistakes.length?mistakes.length+" mistake(s) saved for revision.":"Excellent — no mistakes recorded."}</p>${mistakes.map(m=>`<div class="muted small" style="margin-top:7px">• ${esc(m.question)}<br>Correct: ${esc(m.correct)} • Your answer: ${esc(m.chosen)}</div>`).join("")}</div><button class="btn primary" style="margin-top:10px" onclick="closeStudySession();renderAll()">Continue</button>`;
+ renderHome();
+}
+function esc(s){return String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]))}
 
-function updateEducation(){const college=$("eduType").value==="college";$("classSel").disabled=college;$("stream").disabled=college;renderSubjects()}
-function updateStream(){const other=$("stream").value==="other";$("otherStreamField").classList.toggle("hidden",!other);renderSubjects()}
-$("board").addEventListener("change",()=>$("otherBoardField").classList.toggle("hidden",$("board").value!=="Other"));
-function updateGoal(){const g=$("goal").value;$("percentField").classList.toggle("hidden",g!=="percent");$("customGoalField").classList.toggle("hidden",g!=="custom");$("examField").classList.toggle("hidden",g!=="competitive");if(g!=="competitive")$("otherExamField").classList.add("hidden")}
-$("exam").addEventListener("change",()=>$("otherExamField").classList.toggle("hidden",$("exam").value!=="Other"));
-function renderSubjects(){const college=$("eduType").value==="college",stream=$("stream").value;let a=college?["Physics","Chemistry","Mathematics","Biology","English","Computer Science","Other"]:stream==="maths"?["Mathematics","Physics","Chemistry","English","Computer Science","Physical Education","Other"]:stream==="bio"?["Biology","Physics","Chemistry","English","Computer Science","Physical Education","Other"]:stream==="commerce"?["Accountancy","Business Studies","Economics","Mathematics","English","Computer Science","Other"]:stream==="humanities"?["History","Geography","Political Science","Economics","English","Sociology","Psychology","Other"]:["Mathematics","Science","English","Hindi","Social Science","Computer / IT","Other"];const old=new Set([...document.querySelectorAll("#subjects input:checked")].map(x=>x.value));$("subjects").innerHTML=a.map(s=>`<label class="check"><input type="checkbox" value="${esc(s)}" ${old.has(s)?"checked":""}>${esc(s)}</label>`).join("")}
-function openStudent(){const p=profile()||{};$("studentError").textContent="";$("eduType").value=p.type||"school";$("board").value=["CBSE","ICSE","ISC","MP Board","UP Board","RBSE","Other"].includes(p.board)?p.board:"Other";$("otherBoard").value=p.board&&!['CBSE','ICSE','ISC','MP Board','UP Board','RBSE'].includes(p.board)?p.board:"";$("classSel").value=p.className||"Class 11";$("stream").value=p.streamKey||"maths";$("otherStream").value=p.stream||"";$("goal").value=p.goalKey||"top";$("targetPercent").value=p.target||"";$("customGoal").value=p.customGoal||"";$("exam").value=p.examKey||"JEE Main";$("otherExam").value=p.exam&&!['JEE Main','JEE Advanced','NEET','CUET','UPSC'].includes(p.exam)?p.exam:"";$("studyTime").value=p.time||"2 hours";$("level").value=p.level||"Intermediate";$("strong").value=p.strong||"";$("weak").value=p.weak||"";$("pastWork").value=p.pastWork||"";updateEducation();updateStream();updateGoal();$("board").dispatchEvent(new Event("change"));$("exam").dispatchEvent(new Event("change"));setTimeout(()=>{let chosen=new Set(p.subjects||[]);document.querySelectorAll("#subjects input").forEach(x=>x.checked=chosen.has(x.value))},0);openModal("studentModal")}
+function updateEducation(){
+ const college=$("eduType").value==="college";$("classSel").disabled=college;$("stream").disabled=college;
+ renderSubjects();
+}
+function updateStream(){
+ const other=$("stream").value==="other";$("otherStreamField").classList.toggle("hidden",!other);renderSubjects()
+}
+$("board").addEventListener("change",()=>{$("otherBoardField").classList.toggle("hidden",$("board").value!=="Other")});
+function updateGoal(){
+ const g=$("goal").value;
+ $("percentField").classList.toggle("hidden",g!=="percent");$("customGoalField").classList.toggle("hidden",g!=="custom");$("examField").classList.toggle("hidden",g!=="competitive");
+ if(g!=="competitive")$("otherExamField").classList.add("hidden");
+}
+$("exam").addEventListener("change",()=>{$("otherExamField").classList.toggle("hidden",$("exam").value!=="Other")});
+function renderSubjects(){
+ const college=$("eduType").value==="college",stream=$("stream").value;
+ let a=college?["Physics","Chemistry","Mathematics","Biology","English","Computer Science","Other"]:
+ stream==="maths"?["Mathematics","Physics","Chemistry","English","Computer Science","Physical Education","Other"]:
+ stream==="bio"?["Biology","Physics","Chemistry","English","Computer Science","Physical Education","Other"]:
+ stream==="commerce"?["Accountancy","Business Studies","Economics","Mathematics","English","Computer Science","Other"]:
+ stream==="humanities"?["History","Geography","Political Science","Economics","English","Sociology","Psychology","Other"]:
+ ["Mathematics","Science","English","Hindi","Social Science","Computer / IT","Other"];
+ const old=new Set([...document.querySelectorAll("#subjects input:checked")].map(x=>x.value));
+ $("subjects").innerHTML=a.map(s=>`<label class="check"><input type="checkbox" value="${esc(s)}" ${old.has(s)?"checked":""}>${esc(s)}</label>`).join("");
+}
+function openStudent(){
+ const p=profile()||{};$("studentError").textContent="";
+ $("eduType").value=p.type||"school";$("board").value=["CBSE","ICSE","ISC","MP Board","UP Board","RBSE","Other"].includes(p.board)?p.board:"Other";
+ $("otherBoard").value=p.board&&!["CBSE","ICSE","ISC","MP Board","UP Board","RBSE"].includes(p.board)?p.board:"";
+ $("classSel").value=p.className||"Class 11";$("stream").value=p.streamKey||"maths";$("otherStream").value=p.stream||"";
+ $("goal").value=p.goalKey||"top";$("targetPercent").value=p.target||"";$("customGoal").value=p.customGoal||"";
+ $("exam").value=p.examKey||"JEE Main";$("otherExam").value=p.exam&&!["JEE Main","JEE Advanced","NEET","CUET","UPSC"].includes(p.exam)?p.exam:"";
+ $("studyTime").value=p.time||"2 hours";$("level").value=p.level||"Intermediate";$("strong").value=p.strong||"";$("weak").value=p.weak||"";$("pastWork").value=p.pastWork||"";
+ updateEducation();updateStream();updateGoal();$("board").dispatchEvent(new Event("change"));$("exam").dispatchEvent(new Event("change"));
+ setTimeout(()=>{let chosen=new Set(p.subjects||[]);document.querySelectorAll("#subjects input").forEach(x=>x.checked=chosen.has(x.value))},0);
+ openModal("studentModal");
+}
 function saveStudent(){
- const college=$("eduType").value==="college",board=$("board").value==="Other"?$("otherBoard").value.trim():$("board").value,streamKey=$("stream").value,stream=streamKey==="other"?$("otherStream").value.trim():streamKey,g=$("goal").value,examKey=$("exam").value,exam=examKey==="Other"?$("otherExam").value.trim():examKey,subs=[...document.querySelectorAll("#subjects input:checked")].map(x=>x.value).filter(x=>x!=="Other");
- if(!board||(!college&&!stream)||!subs.length){$("studentError").textContent="Please select board/stream and at least one subject.";return}if(g==="competitive"&&!exam){$("studentError").textContent="Please choose a competitive exam or write Other.";return}if(g==="custom"&&!$("customGoal").value.trim()){$("studentError").textContent="Please write your goal.";return}
- let goalText={top:"Top my class",percent:"Achieve "+($("targetPercent").value||"")+"%",subject:"Become strong in my subjects",exam:"Prepare for my exam",competitive:"Prepare for "+exam,next:"Prepare for the next class",custom:$("customGoal").value.trim()}[g];const u=current(),old=u.profile;const cycleStart=old?.cycleStart||new Date().toISOString(),currentDay=old?.currentDay||1;u.profile={type:college?"college":"school",board,className:college?"College":$("classSel").value,streamKey,stream,goalKey:g,goalText,target:$("targetPercent").value,customGoal:$("customGoal").value,examKey,exam,time:$("studyTime").value,level:$("level").value,strong:$("strong").value.trim(),weak:$("weak").value.trim(),pastWork:$("pastWork").value.trim(),subjects:subs,goalDone:false,cycleStart,currentDay};saveState();closeModal("studentModal");ensureDay();renderAll();toast("Profile saved — your live plan was updated.");go("home")}
-function renderProfile(){const u=current(),p=profile();if(!u)return;$("accountRows").innerHTML=`<div class="profile-row"><span>Name</span><b>${esc(u.name)}</b></div><div class="profile-row"><span>Email</span><b>${esc(u.email)}</b></div><div class="profile-row"><span>Plan</span><b>${esc(u.plan||"Free")}</b></div>`;if(!p){$("profileRows").innerHTML='<p class="muted">No student profile yet.</p>';return}const rows=[["Education",p.type],["Board",p.board],["Class",p.className],["Stream",p.stream], ["Subjects",(p.subjects||[]).join(", ")],["Goal",p.goalText],["Competitive exam",p.exam],["Daily study",p.time],["Level",p.level],["Strong",p.strong],["Weak",p.weak],["Past work",p.pastWork],["Cycle","Day "+cycleDay()+" / 21"]];$("profileRows").innerHTML=rows.filter(x=>x[1]).map(x=>`<div class="profile-row"><span>${esc(x[0])}</span><b>${esc(x[1])}</b></div>`).join("")}
-function resetAllData(){if(!confirm("This will remove all NEXORA data from this browser. Continue?"))return;localStorage.removeItem(DB_KEY);localStorage.removeItem(OLD_KEY);location.reload()}
+ const college=$("eduType").value==="college",board=$("board").value==="Other"?$("otherBoard").value.trim():$("board").value;
+ const streamKey=$("stream").value,stream=streamKey==="other"?$("otherStream").value.trim():streamKey;
+ const g=$("goal").value,examKey=$("exam").value,exam=examKey==="Other"?$("otherExam").value.trim():examKey;
+ const subs=[...document.querySelectorAll("#subjects input:checked")].map(x=>x.value).filter(x=>x!=="Other");
+ if(!board||(!college&&!stream)||!subs.length){$("studentError").textContent="Please select board/stream and at least one subject.";return}
+ if(g==="competitive"&&!exam){$("studentError").textContent="Please choose a competitive exam or write Other.";return}
+ if(g==="custom"&&!$("customGoal").value.trim()){$("studentError").textContent="Please write your goal.";return}
+ let goalText={top:"Top my class",percent:"Achieve "+($("targetPercent").value||"")+"%",subject:"Become strong in my subjects",exam:"Prepare for my exam",competitive:"Prepare for "+exam,next:"Prepare for the next class",custom:$("customGoal").value.trim()}[g];
+ const u=current();u.profile={type:college?"college":"school",board,className:college?"College":$("classSel").value,streamKey,stream,goalKey:g,goalText,target:$("targetPercent").value,customGoal:$("customGoal").value,examKey,exam,time:$("studyTime").value,level:$("level").value,strong:$("strong").value.trim(),weak:$("weak").value.trim(),pastWork:$("pastWork").value.trim(),subjects:subs,goalDone:false,planStart:(current()?.profile?.planStart||new Date().toISOString())};
+ saveState();closeModal("studentModal");renderAll();toast("Profile saved — timetable, roadmap and tasks updated.");go("home");
+}
+function renderProfile(){
+ const u=current(),p=profile();if(!u)return;
+ $("accountRows").innerHTML=`<div class="profile-row"><span>Name</span><b>${esc(u.name)}</b></div><div class="profile-row"><span>Email</span><b>${esc(u.email)}</b></div><div class="profile-row"><span>Plan</span><b>${esc(u.plan||"Free")}</b></div>`;
+ if(!p){$("profileRows").innerHTML='<p class="muted">No student profile yet.</p>';return}
+ const rows=[["Education",p.type],["Board",p.board],["Class",p.className],["Stream",p.stream],["Subjects",(p.subjects||[]).join(", ")],["Goal",p.goalText],["Competitive exam",p.exam],["Daily study",p.time],["Level",p.level],["Strong",p.strong],["Weak",p.weak],["Past work",p.pastWork]];
+ $("profileRows").innerHTML=rows.filter(x=>x[1]).map(x=>`<div class="profile-row"><span>${esc(x[0])}</span><b>${esc(x[1])}</b></div>`).join("");
+}
 window.addEventListener("click",e=>{if(e.target.classList.contains("modal"))e.target.classList.remove("open")});
 </script>
+
+<div id="studySessionModal" class="study-modal" aria-hidden="true">
+ <div class="study-modal-box">
+  <div class="study-modal-head">
+   <div><h2 id="sessionTitle">Study Session</h2><p id="sessionMeta" class="muted"></p></div>
+   <button class="btn" onclick="closeStudySession()">×</button>
+  </div>
+  <div id="sessionBody"></div>
+ </div>
+</div>
 </body>
 </html>
