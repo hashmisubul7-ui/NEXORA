@@ -152,13 +152,13 @@ label.field>span{display:block;margin:0 0 7px}
 
 <!-- TODAY -->
 <section id="page-today" class="page">
- <h1 class="page-title">Today</h1><p class="page-sub">Open each task to study the lesson, see an example, solve practice questions and then complete the session.</p>
+ <h1 class="page-title">Today</h1><p class="page-sub">Open each task to study the lesson, see an example, solve practice questions and then complete the session. <span class="muted small">NEXORA V10</span></p>
  <div class="section-grid"><div class="section-card card"><h3>Today's tasks</h3><div id="todayTasks"></div></div><div class="section-card card"><h3>Progress</h3><div class="progressbar"><i id="todayProgress"></i></div><p id="todayProgressText" class="muted small"></p><div class="notice">Test days: Day 7, Day 14 and Day 21. Use mistakes to adjust your next cycle.</div></div></div>
 </section>
 
 <!-- TIMETABLE -->
 <section id="page-timetable" class="page">
- <h1 class="page-title">Timetable</h1><p class="page-sub">A simple weekly plan generated from your selected subjects.</p>
+ <h1 class="page-title">Timetable</h1><p class="page-sub">A simple weekly plan generated from your selected subjects. <span class="muted small">NEXORA V10</span></p>
  <div id="timetable" class="day-grid"></div>
 </section>
 
@@ -295,7 +295,19 @@ function go(page){
  renderPage(page);window.scrollTo({top:0,behavior:"smooth"});
 }
 function renderAll(){renderHome();renderToday();renderTimetable();renderRoadmap();renderStudy();renderProfile()}
-function renderPage(p){if(p==="home")renderHome();if(p==="today")renderToday();if(p==="timetable")renderTimetable();if(p==="roadmap")renderRoadmap();if(p==="study")renderStudy();if(p==="profile")renderProfile()}
+function renderPage(p){
+ try{
+  if(p==="home")renderHome();
+  if(p==="today")renderToday();
+  if(p==="timetable")renderTimetable();
+  if(p==="roadmap")renderRoadmap();
+  if(p==="study")renderStudy();
+  if(p==="profile")renderProfile();
+ }catch(err){
+  console.error("NEXORA render error",err);
+  const target=$("page-"+p); if(target) target.dataset.renderError="true";
+ }
+}
 function normalizeSubjects(raw,p){
  let list=[];
  if(Array.isArray(raw)) list=raw;
@@ -332,7 +344,11 @@ function minutes(v){
  const n=parseInt(x,10);
  return Number.isFinite(n)&&n>0?Math.min(1440,n):60;
 }
-function subjects(){const p=profile();return p?normalizeSubjects(p.subjects,p):[]}
+function subjects(){
+ const p=profile();
+ const list=p?normalizeSubjects(p.subjects,p):[];
+ return list.length?list:["Mathematics","Physics","Chemistry"];
+}
 
 function cycleDay(){
  const p=profile(); if(!p) return 1;
@@ -385,7 +401,6 @@ function taskForDay(subject,i,day){
  return {id:`d${day}_${i}`,subject,title:(isWeak?"Focus: ":"Study: ")+subject+" — "+l.title.split(" — ").pop(),meta:(isWeak?"Weak-area focus • ":"")+"Learn → example → practice • "+share+" min",minutes:share,lesson:l};
 }
 function allTasks(){
- const p=profile();if(!p)return [];
  const day=cycleDay();
  return subjects().map((s,i)=>taskForDay(s,i,day));
 }
@@ -436,11 +451,11 @@ function renderHome(){
 }
 
 function renderToday(){
- const box=$("todayTasks");const p=profile();
- if(!p){box.innerHTML='<div class="muted">Create your student profile first.</div>';return}
+ const box=$("todayTasks"), p=profile();
  const d=userData(),done=d.tasks||{},tasks=allTasks(),day=cycleDay();
- if(!tasks.length){box.innerHTML='<div class="empty-state"><b>No study tasks were generated.</b><p class="muted small">Your saved profile had no readable subjects, so NEXORA repaired it with a default subject set. Open Profile once and save it to confirm your subjects.</p><button class="btn primary" onclick="openStudent()">Review subjects</button></div>';}
- else {
+ if(!tasks.length){
+   box.innerHTML='<div class="empty-state"><b>Preparing your study plan…</b><p class="muted small">NEXORA could not read the saved subjects, so a default 3-subject plan is being used.</p></div>';
+ }else{
    box.innerHTML=tasks.map(t=>`<div class="task ${done[t.id]?"done":""}">
      <button class="task-open" onclick="openStudySession('${t.id}')"><span class="task-title">${done[t.id]?"✓ ":""}${esc(t.title)}</span><div class="muted small">${esc(t.meta)} • ${done[t.id]?"Completed — open again":"Open study session →"}</div></button>
     </div>`).join("");
