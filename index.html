@@ -56,9 +56,10 @@ label.field>span{display:block;margin:0 0 7px}
 .app-main{padding:28px 0}
 .page{display:none}.page.active{display:block}
 .page-title{margin:0 0 6px;font-size:32px;letter-spacing:-1px}.page-sub{margin:0 0 22px;color:var(--muted)}
-.appnav{position:fixed;z-index:50;left:50%;bottom:12px;transform:translateX(-50%);width:min(760px,calc(100% - 20px));background:color-mix(in srgb,var(--surface) 96%,transparent);border:1px solid var(--border);box-shadow:var(--shadow);border-radius:20px;padding:7px;display:grid;grid-template-columns:repeat(7,1fr);gap:3px}
-.appnav button{border:0;background:transparent;color:var(--muted);border-radius:14px;padding:9px 5px;font-size:11px;font-weight:900}
+.appnav{position:fixed;z-index:50;left:50%;bottom:12px;transform:translateX(-50%);width:min(760px,calc(100% - 20px));background:color-mix(in srgb,var(--surface) 96%,transparent);border:1px solid var(--border);box-shadow:var(--shadow);border-radius:20px;padding:7px;display:grid;grid-template-columns:repeat(8,1fr);gap:2px}
+.appnav button{border:0;background:transparent;color:var(--muted);border-radius:14px;padding:9px 3px;font-size:10px;font-weight:900;min-width:0}
 .appnav button.active{background:rgba(99,91,219,.15);color:var(--accent)}
+.appnav .navemoji{white-space:nowrap}
 .navemoji{display:block;font-size:19px;line-height:1.1;margin-bottom:3px}
 .welcome{display:flex;justify-content:space-between;align-items:center;gap:20px;padding:24px;margin-bottom:18px}
 .welcome h2{font-size:32px;margin:4px 0}.welcome-actions{display:flex;gap:8px;flex-wrap:wrap}
@@ -147,18 +148,31 @@ label.field>span{display:block;margin:0 0 7px}
  <div class="welcome card"><div><div class="kicker">YOUR STUDY SPACE</div><h2 id="welcome">Welcome 👋</h2><div id="studentLine" class="muted"></div></div><div class="welcome-actions"><button class="btn" onclick="go('profile')">👤 Profile</button><button class="btn" onclick="openStudent()">Edit plan</button></div></div>
  <div class="goal card"><div class="eyebrow">ACTIVE GOAL</div><h2 id="homeGoal">Set your first goal</h2><div id="homeGoalMeta" class="goal-meta"></div><button class="btn primary" onclick="go('today')">View Today's Tasks</button> <button class="btn" onclick="go('roadmap')">View Roadmap</button></div>
  <div class="stats"><div class="stat card"><b id="statProgress">0%</b><span>21-day progress</span></div><div class="stat card"><b id="statDone">0</b><span>tasks done</span></div><div class="stat card"><b id="statFocus">Balanced</b><span>focus</span></div></div>
- <div class="quick card"><h3>Quick access</h3><div class="quick-grid"><button class="btn" onclick="go('today')">✅ Today</button><button class="btn" onclick="go('timetable')">📅 Timetable</button><button class="btn" onclick="go('study')">🧠 Study</button><button class="btn" onclick="go('profile')">👤 Profile</button></div></div>
+ <div class="quick card"><h3>Quick access</h3><div class="quick-grid"><button class="btn" onclick="go('today')">✅ Today</button><button class="btn" onclick="go('timetable')">📅 Timetable</button><button class="btn" onclick="go('study')">🧠 Study</button><button class="btn" onclick="go('summarize')">📝 Summarize</button><button class="btn" onclick="go('profile')">👤 Profile</button></div></div>
+</section>
+
+<!-- SUMMARIZE -->
+<section id="page-summarize" class="page">
+ <h1 class="page-title">Summarizer</h1>
+ <p class="page-sub">Your original NEXORA summarizer — available even after you sign in.</p>
+ <div class="summarizer card" style="margin:0;max-width:none">
+  <div class="tabs"><button class="btn primary" id="appTextTab" onclick="setAppSumMode('text')">Text</button><button class="btn" id="appUrlTab" onclick="setAppSumMode('url')">URL</button></div>
+  <textarea id="appSumInput" placeholder="Paste a long article or text here..."></textarea>
+  <div style="display:grid;grid-template-columns:1fr auto;gap:10px;margin-top:10px"><select id="appSumLength"><option value="short">Short</option><option value="medium">Medium</option><option value="long">Long</option></select><button class="btn primary" onclick="summarizeApp()">Summarize</button></div>
+  <div id="appSumResult" class="result hidden"></div>
+  <div class="notice" style="margin-top:14px">For the offline version, text summarization works directly in the browser. URL extraction needs a backend.</div>
+ </div>
 </section>
 
 <!-- TODAY -->
 <section id="page-today" class="page">
- <h1 class="page-title">Today</h1><p class="page-sub">Open each task to study the lesson, see an example, solve practice questions and then complete the session. <span class="muted small">NEXORA V10</span></p>
+ <h1 class="page-title">Today</h1><p class="page-sub">Open each task to study the lesson, see an example, solve practice questions and then complete the session. <span class="muted small">NEXORA V11</span></p>
  <div class="section-grid"><div class="section-card card"><h3>Today's tasks</h3><div id="todayTasks"></div></div><div class="section-card card"><h3>Progress</h3><div class="progressbar"><i id="todayProgress"></i></div><p id="todayProgressText" class="muted small"></p><div class="notice">Test days: Day 7, Day 14 and Day 21. Use mistakes to adjust your next cycle.</div></div></div>
 </section>
 
 <!-- TIMETABLE -->
 <section id="page-timetable" class="page">
- <h1 class="page-title">Timetable</h1><p class="page-sub">A simple weekly plan generated from your selected subjects. <span class="muted small">NEXORA V10</span></p>
+ <h1 class="page-title">Timetable</h1><p class="page-sub">A simple weekly plan generated from your selected subjects. <span class="muted small">NEXORA V11</span></p>
  <div id="timetable" class="day-grid"></div>
 </section>
 
@@ -195,6 +209,7 @@ label.field>span{display:block;margin:0 0 7px}
 </main>
 <nav class="appnav" aria-label="main navigation">
  <button id="nav-home" class="active" onclick="go('home')"><span class="navemoji">🏠</span>Home</button>
+ <button id="nav-summarize" onclick="go('summarize')"><span class="navemoji">📝</span>Summarize</button>
  <button id="nav-today" onclick="go('today')"><span class="navemoji">✅</span>Today</button>
  <button id="nav-timetable" onclick="go('timetable')"><span class="navemoji">📅</span>Timetable</button>
  <button id="nav-roadmap" onclick="go('roadmap')"><span class="navemoji">🗺️</span>Roadmap</button>
@@ -270,6 +285,17 @@ function summarize(){
  $("sumResult").classList.remove("hidden");
 }
 
+function setAppSumMode(m){window.appSumMode=m;$('appTextTab').classList.toggle('primary',m==='text');$('appUrlTab').classList.toggle('primary',m==='url');$('appSumInput').placeholder=m==='url'?'Paste an article URL here...':'Paste a long article or text here...'}
+function summarizeApp(){
+ const text=$('appSumInput').value.trim();if(!text){toast('Paste some text first.');return}
+ if((window.appSumMode||'text')==='url'){toast('URL extraction needs a backend. Paste the article text for this offline version.');return}
+ const sentences=text.replace(/\s+/g,' ').match(/[^.!?]+[.!?]+/g)||[text];
+ const ratio={short:.22,medium:.45,long:.68}[$('appSumLength').value]||.45;
+ const n=Math.max(1,Math.ceil(sentences.length*ratio));
+ $('appSumResult').textContent=sentences.slice(0,n).map(s=>'• '+s.trim()).join('\n');$('appSumResult').classList.remove('hidden');
+}
+window.appSumMode='text';
+
 function openAuth(mode){authMode=mode;$("authTitle").textContent=mode==="login"?"Sign in to NEXORA":"Create your NEXORA account";$("nameField").classList.toggle("hidden",mode==="login");$("authSwitch").textContent=mode==="login"?"Create account":"Already have an account? Sign in";$("authError").textContent="";openModal("authModal")}
 function toggleAuth(){openAuth(authMode==="login"?"signup":"login")}
 function submitAuth(){
@@ -302,6 +328,7 @@ function renderPage(p){
   if(p==="timetable")renderTimetable();
   if(p==="roadmap")renderRoadmap();
   if(p==="study")renderStudy();
+  if(p==="summarize"){}
   if(p==="profile")renderProfile();
  }catch(err){
   console.error("NEXORA render error",err);
