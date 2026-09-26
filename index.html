@@ -65,7 +65,7 @@ label.field>span{display:block;margin:0 0 7px}
 .goal{padding:24px;margin-bottom:18px}.goal .eyebrow{font-size:12px;font-weight:900;color:var(--accent);letter-spacing:1.5px}.goal h2{margin:9px 0;font-size:29px}.goal-meta{color:var(--muted);margin-bottom:18px}
 .stats{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:18px}.stat{padding:20px}.stat b{font-size:28px}.stat span{display:block;color:var(--muted);margin-top:5px}
 .quick{padding:22px}.quick-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
-.section-grid{display:grid;grid-template-columns:1.15fr .85fr;gap:18px}.section-card{padding:22px}
+.section-grid{display:grid;grid-template-columns:1.15fr .85fr;gap:18px}.section-card{padding:22px}.empty-state{padding:18px;border:1px dashed var(--border);border-radius:14px;text-align:center}.empty-state .btn{margin-top:10px}
 .task{display:flex;gap:12px;align-items:flex-start;padding:15px 0;border-bottom:1px solid var(--border)}.task:last-child{border-bottom:0}.task input{width:19px;height:19px;margin-top:3px;accent-color:var(--accent)}.task.done .task-title{text-decoration:line-through;color:var(--muted)}
 .progressbar{height:10px;background:var(--surface2);border-radius:99px;overflow:hidden}.progressbar>i{display:block;height:100%;background:var(--accent);width:0;transition:width .2s}
 .day-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:12px}.day{padding:18px}.day h3{margin:0 0 12px}.slot{padding:9px 0;border-top:1px solid var(--border);font-size:14px}
@@ -296,9 +296,43 @@ function go(page){
 }
 function renderAll(){renderHome();renderToday();renderTimetable();renderRoadmap();renderStudy();renderProfile()}
 function renderPage(p){if(p==="home")renderHome();if(p==="today")renderToday();if(p==="timetable")renderTimetable();if(p==="roadmap")renderRoadmap();if(p==="study")renderStudy();if(p==="profile")renderProfile()}
-function profile(){return current()?.profile||null}
-function minutes(v){if(!v)return 60;if(v.includes("30"))return 30;if(v.includes("1 hour"))return 60;if(v.includes("2 hours"))return 120;if(v.includes("3 hours"))return 180;return 240}
-function subjects(){return profile()?.subjects||[]}
+function normalizeSubjects(raw,p){
+ let list=[];
+ if(Array.isArray(raw)) list=raw;
+ else if(typeof raw==="string") list=raw.split(/[,|]/);
+ else if(raw&&typeof raw==="object") list=Object.values(raw);
+ list=list.map(x=>String(x||"").trim()).filter(Boolean).filter(x=>x.toLowerCase()!=="other");
+ if(!list.length){
+   const exam=String(p?.exam||p?.examKey||"").toLowerCase();
+   const stream=String(p?.streamKey||p?.stream||"").toLowerCase();
+   if(exam.includes("jee")) list=["Mathematics","Physics","Chemistry"];
+   else if(exam.includes("neet")) list=["Biology","Physics","Chemistry"];
+   else if(stream.includes("commerce")) list=["Accountancy","Business Studies","Economics","Mathematics"];
+   else if(stream.includes("bio")) list=["Biology","Physics","Chemistry","English"];
+   else list=["Mathematics","Science","English"];
+ }
+ return [...new Set(list)];
+}
+function profile(){
+ const p=current()?.profile||null;
+ if(p){
+   const normalized=normalizeSubjects(p.subjects,p);
+   if(JSON.stringify(normalized)!==JSON.stringify(p.subjects)){p.subjects=normalized;saveState()}
+ }
+ return p;
+}
+function minutes(v){
+ const x=String(v||"").toLowerCase();
+ if(!x)return 60;
+ if(x.includes("30"))return 30;
+ if(x.includes("1 hour"))return 60;
+ if(x.includes("2 hours"))return 120;
+ if(x.includes("3 hours"))return 180;
+ if(x.includes("4+")||x.includes("4 hours"))return 240;
+ const n=parseInt(x,10);
+ return Number.isFinite(n)&&n>0?Math.min(1440,n):60;
+}
+function subjects(){const p=profile();return p?normalizeSubjects(p.subjects,p):[]}
 
 function cycleDay(){
  const p=profile(); if(!p) return 1;
@@ -342,15 +376,18 @@ function lessonFor(subject){
  return {title:`${subject} — Guided Study`,concept:`Study the current ${subject} topic actively: learn the definition or core idea, write the key rules/formulas in your own words, then solve practice questions without looking at the answer.`,formulas:["Key definition / rule","Key formula or method","One common mistake"],example:"Open your class notes/textbook for today's exact chapter, then use the practice check below to verify recall.",practice:[[`Write the main definition/rule you learned in today's ${subject} session.`,`Self-check`],[`Solve one representative problem from today's ${subject} topic without looking at the solution.`,`Self-check`]]};
 }
 function taskForDay(subject,i,day){
- const p=profile(),weak=(p.weak||"").toLowerCase().split(",").map(x=>x.trim()).filter(Boolean);
- const isWeak=weak.some(w=>subject.toLowerCase().includes(w));
+ const p=profile(),subs=subjects(),weak=String(p?.weak||"").toLowerCase().split(",").map(x=>x.trim()).filter(Boolean);
+ const isWeak=weak.some(w=>subject.toLowerCase().includes(w)||w.includes(subject.toLowerCase()));
  const l=lessonFor(subject);
- return {id:`d${day}_${i}`,subject,title:(isWeak?"Focus: ":"Study: ")+subject+" — "+l.title.split(" — ").pop(),meta:(isWeak?"Weak-area focus • ":"")+"Learn → example → practice • "+Math.max(10,Math.round(minutes(p.time)*(isWeak?1.5:1)/(p.subjects.reduce((a,x)=>a+(weak.some(w=>x.toLowerCase().includes(w))?1.5:1),0)||1)))+" min",lesson:l};
+ const weights=subs.map(x=>weak.some(w=>x.toLowerCase().includes(w)||w.includes(x.toLowerCase()))?1.5:1);
+ const sum=weights.reduce((a,b)=>a+b,0)||1;
+ const share=Math.max(10,Math.round(minutes(p?.time)*((isWeak?1.5:1))/sum));
+ return {id:`d${day}_${i}`,subject,title:(isWeak?"Focus: ":"Study: ")+subject+" — "+l.title.split(" — ").pop(),meta:(isWeak?"Weak-area focus • ":"")+"Learn → example → practice • "+share+" min",minutes:share,lesson:l};
 }
 function allTasks(){
  const p=profile();if(!p)return [];
  const day=cycleDay();
- return (p.subjects||[]).map((s,i)=>taskForDay(s,i,day));
+ return subjects().map((s,i)=>taskForDay(s,i,day));
 }
 function doneCount(){
  const d=userData(),tasks=d.tasks||{};
@@ -373,7 +410,7 @@ function openStudySession(taskId){
   <div class="lesson-block"><h3>3. Worked example</h3><p>${esc(l.example)}</p></div>
   <div class="lesson-block"><h3>4. Practice</h3>${l.practice.map((x,i)=>`<div class="practice-q"><b>${i+1}. ${esc(x[0])}</b><input id="practice_${i}" placeholder="Write your answer"><button class="btn" style="margin-top:7px" onclick="checkPractice(${i})">Check</button><div id="practiceResult_${i}" class="muted small" style="margin-top:6px"></div></div>`).join("")}</div>
   <div class="notice" style="margin-top:12px">Finish the lesson and practice before completing the task. NEXORA will record this session in your progress.</div>
-  <div class="session-actions"><button class="btn primary" onclick="completeStudyTask()">✓ Complete study session</button><button class="btn" onclick="setTimer(${Math.min(90,Math.max(10,parseInt(task.meta)||25))})">⏱ Start focus timer</button></div>`;
+  <div class="session-actions"><button class="btn primary" onclick="completeStudyTask()">✓ Complete study session</button><button class="btn" onclick="setTimer(${Math.min(180,Math.max(10,task.minutes||25))})">⏱ Start focus timer</button></div>`;
  $("studySessionModal").classList.add("open");
 }
 function checkPractice(i){
@@ -399,11 +436,15 @@ function renderHome(){
 }
 
 function renderToday(){
- const box=$("todayTasks");if(!profile()){box.innerHTML='<div class="muted">Create your student profile first.</div>';return}
+ const box=$("todayTasks");const p=profile();
+ if(!p){box.innerHTML='<div class="muted">Create your student profile first.</div>';return}
  const d=userData(),done=d.tasks||{},tasks=allTasks(),day=cycleDay();
- box.innerHTML=tasks.map(t=>`<div class="task ${done[t.id]?"done":""}">
-   <button class="task-open" onclick="openStudySession('${t.id}')"><span class="task-title">${done[t.id]?"✓ ":""}${esc(t.title)}</span><div class="muted small">${esc(t.meta)} • ${done[t.id]?"Completed — open again":"Open study session →"}</div></button>
-  </div>`).join("");
+ if(!tasks.length){box.innerHTML='<div class="empty-state"><b>No study tasks were generated.</b><p class="muted small">Your saved profile had no readable subjects, so NEXORA repaired it with a default subject set. Open Profile once and save it to confirm your subjects.</p><button class="btn primary" onclick="openStudent()">Review subjects</button></div>';}
+ else {
+   box.innerHTML=tasks.map(t=>`<div class="task ${done[t.id]?"done":""}">
+     <button class="task-open" onclick="openStudySession('${t.id}')"><span class="task-title">${done[t.id]?"✓ ":""}${esc(t.title)}</span><div class="muted small">${esc(t.meta)} • ${done[t.id]?"Completed — open again":"Open study session →"}</div></button>
+    </div>`).join("");
+ }
  if(day===7||day===14||day===21){
    box.innerHTML+=`<div class="task"><button class="task-open" onclick="openProgressTest()"><span class="task-title">📝 Day ${day} Progress Test</span><div class="muted small">Take the test to complete today's assessment and record mistakes.</div></button></div>`;
  }
@@ -416,12 +457,13 @@ function toggleTask(id,val){ /* legacy compatibility: tasks are now completed th
 
 function renderTimetable(){
  const p=profile(),box=$("timetable");if(!p){box.innerHTML='<div class="card section-card">Create your profile first.</div>';return}
- const subs=p.subjects||[],total=minutes(p.time),weak=(p.weak||"").toLowerCase().split(",").map(x=>x.trim()).filter(Boolean);
- const days=["Monday","Tuesday","Wednesday","Thursday","Friday","Saturday","Sunday"],today=new Date().toLocaleDateString('en-US',{weekday:'long'}),d=userData();
- box.innerHTML=days.map((day,di)=>{
-   const items=subs.map((s,i)=>{let w=weak.some(x=>s.toLowerCase().includes(x)),share=Math.max(10,Math.round(total*(w?1.5:1)/(subs.reduce((a,x)=>a+(weak.some(y=>x.toLowerCase().includes(y))?1.5:1),0)||1)));let key=`${cycleDay()}_${day}_${s}`,done=!!(d.timetableDone||{})[key];return `<div class="slot"><button class="btn small ${done?'primary':''}" onclick="toggleSlot('${esc(key)}')">${done?'✓ Done':'Mark session done'}</button> 📚 <b>${esc(s)}</b> — ${share} min${w?' • weak-area focus':''}</div>`}).join("");
-   if(di===6)items+=`<div class="slot">📝 <b>${[7,14,21].includes(cycleDay())?'Progress test today':'Weekly review'}</b> — ${[7,14,21].includes(cycleDay())?'Open Today to take the test':'Review mistakes and unfinished sessions'}</div>`;
-   return `<div class="day card" style="${day===today?'border-color:var(--accent)':''}"><h3>${day}${day===today?' • Today':''}</h3>${items}</div>`;
+ const subs=subjects(),total=minutes(p.time),weak=String(p.weak||"").toLowerCase().split(",").map(x=>x.trim()).filter(Boolean);
+ const days=["Monday","Tuesday","Wednesday","Thursday","Friday","Saturday","Sunday"],today=new Date().toLocaleDateString('en-US',{weekday:'long'}),d=userData(),day=cycleDay();
+ const weights=subs.map(s=>weak.some(x=>s.toLowerCase().includes(x)||x.includes(s.toLowerCase()))?1.5:1),sum=weights.reduce((a,b)=>a+b,0)||1;
+ box.innerHTML=days.map((dayName,di)=>{
+   const items=subs.map((s,i)=>{let w=weights[i]>1,share=Math.max(10,Math.round(total*weights[i]/sum)),key=`${day}_${dayName}_${i}`,done=!!(d.timetableDone||{})[key],task=allTasks()[i];return `<div class="slot"><button class="btn small ${done?'primary':''}" onclick="openStudySession('${task?task.id:''}')">${done?'✓ Done':'Start session'}</button> 📚 <b>${esc(s)}</b> — ${share} min${w?' • weak-area focus':''}</div>`}).join("");
+   if(di===6)items+=`<div class="slot">📝 <b>${[7,14,21].includes(day)?'Progress test today':'Weekly review'}</b> — ${[7,14,21].includes(day)?'Open Today to take the test':'Review mistakes and unfinished sessions'}</div>`;
+   return `<div class="day card" style="${dayName===today?'border-color:var(--accent)':''}"><h3>${dayName}${dayName===today?' • Today':''}</h3>${items}</div>`;
  }).join("");
 }
 function toggleSlot(key){updateUserData(d=>{d.timetableDone=d.timetableDone||{};d.timetableDone[key]=!d.timetableDone[key];return d});renderTimetable();toast("Timetable updated")}
@@ -570,7 +612,7 @@ function saveStudent(){
  if(g==="competitive"&&!exam){$("studentError").textContent="Please choose a competitive exam or write Other.";return}
  if(g==="custom"&&!$("customGoal").value.trim()){$("studentError").textContent="Please write your goal.";return}
  let goalText={top:"Top my class",percent:"Achieve "+($("targetPercent").value||"")+"%",subject:"Become strong in my subjects",exam:"Prepare for my exam",competitive:"Prepare for "+exam,next:"Prepare for the next class",custom:$("customGoal").value.trim()}[g];
- const u=current();u.profile={type:college?"college":"school",board,className:college?"College":$("classSel").value,streamKey,stream,goalKey:g,goalText,target:$("targetPercent").value,customGoal:$("customGoal").value,examKey,exam,time:$("studyTime").value,level:$("level").value,strong:$("strong").value.trim(),weak:$("weak").value.trim(),pastWork:$("pastWork").value.trim(),subjects:subs,goalDone:false,planStart:(current()?.profile?.planStart||new Date().toISOString())};
+ const u=current();u.profile={type:college?"college":"school",board,className:college?"College":$("classSel").value,streamKey,stream,goalKey:g,goalText,target:$("targetPercent").value,customGoal:$("customGoal").value,examKey,exam,time:$("studyTime").value,level:$("level").value,strong:$("strong").value.trim(),weak:$("weak").value.trim(),pastWork:$("pastWork").value.trim(),subjects:subs,goalDone:false,planStart:(current()?.profile?.planStart||new Date().toISOString()),studyDay:(current()?.profile?.studyDay||1)};
  saveState();closeModal("studentModal");renderAll();toast("Profile saved — timetable, roadmap and tasks updated.");go("home");
 }
 function renderProfile(){
