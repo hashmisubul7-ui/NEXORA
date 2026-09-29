@@ -421,21 +421,28 @@ function subjectKey(s){
  return x;
 }
 function lessonFor(subject){
- const k=subjectKey(subject), bank=lessonBank[k]||{};
+ const p=profile()||{},k=subjectKey(subject),bank=lessonBank[k]||{};
  const topicMap={physics:["kinematics","newton"],chemistry:["mole","atomic"],maths:["quadratic","trigonometry"]};
- const topics=topicMap[k]||[];
- const day=cycleDay(), topic=topics[(day-1)%Math.max(1,topics.length)];
- if(bank[topic]) return bank[topic];
- return {title:`${subject} — Guided Study`,concept:`Study the current ${subject} topic actively: learn the definition or core idea, write the key rules/formulas in your own words, then solve practice questions without looking at the answer.`,formulas:["Key definition / rule","Key formula or method","One common mistake"],example:"Open your class notes/textbook for today's exact chapter, then use the practice check below to verify recall.",practice:[[`Write the main definition/rule you learned in today's ${subject} session.`,`Self-check`],[`Solve one representative problem from today's ${subject} topic without looking at the solution.`,`Self-check`]]};
+ const requested=(String(p.currentSubject||"").toLowerCase()===String(subject||"").toLowerCase())?String(p.currentTopic||""):"";
+ const q=requested.toLowerCase();
+ const alias=q.includes("newton")?"newton":q.includes("kinematic")?"kinematics":q.includes("mole")?"mole":q.includes("atomic")?"atomic":q.includes("quadratic")?"quadratic":q.includes("trigonometry")?"trigonometry":"";
+ const topics=topicMap[k]||[],topic=alias||topics[(cycleDay()-1)%Math.max(1,topics.length)];
+ const practiceOnly=p.syllabusStatus==="practice_only"||p.syllabusStatus==="complete";
+ if(bank[topic]){
+   if(practiceOnly)return Object.assign({},bank[topic],{title:bank[topic].title+" — Practice",concept:"Syllabus is marked complete. Use this session for active recall, questions and mistakes instead of relearning the chapter."});
+   return bank[topic];
+ }
+ return {title:subject+" — "+(requested||"Current Topic"),concept:practiceOnly?"Practice the selected topic, review mistakes and solve questions instead of restarting the syllabus.":"This build does not yet contain a detailed lesson for the selected topic. Use your class or coaching material for the exact chapter while NEXORA uses the declared topic for planning.",formulas:["Key definition / rule","Key formula or method","One common mistake"],example:"Write one example from your current chapter, then solve a similar problem without looking at the solution.",practice:[["Write the main definition/rule from "+(requested||"today's topic")+".","Self-check"],["Solve one representative problem from "+(requested||"today's topic")+" without looking at the solution.","Self-check"]]};
 }
 function taskForDay(subject,i,day){
  const p=profile(),subs=subjects(),weak=String(p?.weak||"").toLowerCase().split(",").map(x=>x.trim()).filter(Boolean);
  const isWeak=weak.some(w=>subject.toLowerCase().includes(w)||w.includes(subject.toLowerCase()));
- const l=lessonFor(subject);
+ const l=lessonFor(subject),practiceOnly=p?.syllabusStatus==="practice_only"||p?.syllabusStatus==="complete";
+ const mode=practiceOnly?"Practice":"Study";
  const weights=subs.map(x=>weak.some(w=>x.toLowerCase().includes(w)||w.includes(x.toLowerCase()))?1.5:1);
  const sum=weights.reduce((a,b)=>a+b,0)||1;
  const share=Math.max(10,Math.round(minutes(p?.time)*((isWeak?1.5:1))/sum));
- return {id:`d${day}_${i}`,subject,title:(isWeak?"Focus: ":"Study: ")+subject+" — "+l.title.split(" — ").pop(),meta:(isWeak?"Weak-area focus • ":"")+"Learn → example → practice • "+share+" min",minutes:share,lesson:l};
+ return {id:"d"+day+"_"+i,subject,title:(isWeak?"Focus: ":"")+mode+": "+subject+" — "+l.title.split(" — ").pop(),meta:(isWeak?"Weak-area focus • ":"")+(practiceOnly?"Practice → questions → mistakes":"Learn → example → practice")+" • "+share+" min",minutes:share,lesson:l};
 }
 function allTasks(){
  const day=cycleDay();
