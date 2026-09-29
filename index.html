@@ -399,6 +399,85 @@ const curriculumCatalog={
 };
 function curriculumForProfile(p){return curriculumCatalog[String(p?.exam||p?.examKey||"")]||null}
 function curriculumSubjects(p){const c=curriculumForProfile(p);return c?c.subjects:null}
+const knowledgeBank={
+ "Physics":{
+  "Kinematics":{
+   title:"Kinematics — Motion Basics",
+   concept:"Kinematics describes motion using quantities such as position, displacement, velocity and acceleration, without asking what causes the motion.",
+   formulas:["Displacement: Δx = x_final − x_initial","Average velocity = displacement / time","Average speed = total distance / total time","Acceleration: a = Δv / Δt"],
+   example:"A student moves 30 m east and then 10 m west. Total distance is 40 m, while displacement is 20 m east.",
+   practice:[
+    ["A runner travels 100 m in 20 s. What is the average speed?","5 m/s"],
+    ["An object moves from x = 2 m to x = 9 m. What is its displacement?","7 m"]
+   ]
+  },
+  "Newton's Laws":{
+   title:"Newton's Laws — Introduction",
+   concept:"Newton's laws connect the motion of an object with the forces acting on it. The first law describes inertia, the second gives the relation between net force and acceleration, and the third describes force pairs.",
+   formulas:["First law: an object maintains its state of motion when net external force is zero","Second law: F_net = ma","Third law: forces occur in equal-and-opposite interaction pairs"],
+   example:"For a 2 kg object acted on by a net force of 10 N, acceleration is a = F/m = 5 m/s².",
+   practice:[
+    ["A 4 kg object has a net force of 12 N. Find its acceleration.","3 m/s²"],
+    ["Which law gives F_net = ma?","Second law"]
+   ]
+  },
+  "Units & Measurements":{
+   title:"Units & Measurements",
+   concept:"Physical quantities are expressed with numerical values and units. SI units provide a common measurement system used in physics.",
+   formulas:["Length: metre (m)","Time: second (s)","Mass: kilogram (kg)","Speed: m/s and acceleration: m/s²"],
+   example:"72 km/h = 20 m/s because 72 × 5/18 = 20.",
+   practice:[
+    ["Convert 36 km/h to m/s.","10 m/s"],
+    ["What is the SI unit of mass?","kg"]
+   ]
+  }
+ },
+ "Chemistry":{
+  "Some Basic Concepts of Chemistry":{
+   title:"Some Basic Concepts of Chemistry — Mole Concept",
+   concept:"The mole is a counting unit for microscopic particles. One mole contains Avogadro's number of entities.",
+   formulas:["1 mol = 6.022 × 10²³ particles","Number of moles n = given mass / molar mass","Molar mass is expressed in g/mol"],
+   example:"18 g of water is 1 mol because the molar mass of H₂O is 18 g/mol.",
+   practice:[
+    ["How many moles are present in 36 g of H₂O?","2 mol"],
+    ["What is the approximate number of particles in 1 mol?","6.022 × 10²³"]
+   ]
+  },
+  "Atomic Structure":{
+   title:"Atomic Structure — Basic Model",
+   concept:"Atoms contain a nucleus with protons and neutrons, surrounded by electrons. Atomic number equals the number of protons in a neutral atom.",
+   formulas:["Atomic number Z = number of protons","Mass number A = protons + neutrons","Neutral atom: electrons = protons"],
+   example:"Carbon-12 has 6 protons and 6 neutrons, so A = 12 and Z = 6.",
+   practice:[
+    ["An atom has 8 protons. What is its atomic number?","8"],
+    ["A neutral atom has 11 protons. How many electrons does it have?","11"]
+   ]
+  }
+ },
+ "Mathematics":{
+  "Quadratic Equations":{
+   title:"Quadratic Equations — Basics",
+   concept:"A quadratic equation has the general form ax² + bx + c = 0, where a ≠ 0. Its roots can be found using factorisation or the quadratic formula.",
+   formulas:["Quadratic formula: x = (−b ± √(b²−4ac)) / 2a","Discriminant D = b² − 4ac","D > 0: two distinct real roots; D = 0: equal real roots; D < 0: no real roots"],
+   example:"For x² − 5x + 6 = 0, factorisation gives (x−2)(x−3)=0, so x = 2 or 3.",
+   practice:[
+    ["Solve x² − 5x + 6 = 0.","2 and 3"],
+    ["For x² + 1 = 0, is the discriminant positive, zero or negative?","negative"]
+   ]
+  },
+  "Trigonometry":{
+   title:"Trigonometry — Right Triangle Ratios",
+   concept:"For an acute angle in a right triangle, sine, cosine and tangent relate the angle to ratios of the sides.",
+   formulas:["sin θ = perpendicular / hypotenuse","cos θ = base / hypotenuse","tan θ = perpendicular / base"],
+   example:"In a right triangle, if perpendicular = 3 and hypotenuse = 5, then sin θ = 3/5.",
+   practice:[
+    ["If perpendicular = 3 and base = 4, find tan θ.","3/4"],
+    ["What is cos θ in a right triangle with base 4 and hypotenuse 5?","4/5"]
+   ]
+  }
+ }
+};
+
 const lessonBank={
  "physics":{
   "kinematics":{title:"Kinematics — Motion Basics",concept:"Kinematics describes motion using displacement, velocity and acceleration without focusing on its cause.",formulas:["v = u + at","s = ut + ½at²","v² = u² + 2as"],example:"A body starts from rest and accelerates at 2 m/s² for 5 s. v = 0 + 2×5 = 10 m/s.",practice:[["A car starts from rest with a=3 m/s² for 4 s. Find v.","12 m/s"],["If u=5 m/s, a=2 m/s² and t=3 s, find v.","11 m/s"]]},
@@ -421,19 +500,16 @@ function subjectKey(s){
  return x;
 }
 function lessonFor(subject){
- const p=profile()||{},k=subjectKey(subject),bank=lessonBank[k]||{};
- const topicMap={physics:["kinematics","newton"],chemistry:["mole","atomic"],maths:["quadratic","trigonometry"]};
- const requested=(String(p.currentSubject||"").toLowerCase()===String(subject||"").toLowerCase())?String(p.currentTopic||""):"";
- const q=requested.toLowerCase();
- const alias=q.includes("newton")?"newton":q.includes("kinematic")?"kinematics":q.includes("mole")?"mole":q.includes("atomic")?"atomic":q.includes("quadratic")?"quadratic":q.includes("trigonometry")?"trigonometry":"";
- const topics=topicMap[k]||[],topic=alias||topics[(cycleDay()-1)%Math.max(1,topics.length)];
+ const p=profile()||{},k=subjectKey(subject),requested=(String(p.currentSubject||"").toLowerCase()===String(subject||"").toLowerCase())?String(p.currentTopic||""):"";
+ const subjectName=String(subject||"");
+ const kb=knowledgeBank[subjectName]||knowledgeBank[subjectName==="Physics"?"Physics":subjectName==="Chemistry"?"Chemistry":subjectName==="Mathematics"?"Mathematics":""];
+ const topic=Object.keys(kb||{}).find(t=>t.toLowerCase()===requested.toLowerCase())||Object.keys(kb||{}).find(t=>requested&&t.toLowerCase().includes(requested.toLowerCase()))||Object.keys(kb||{})[Math.max(0,(cycleDay()-1)%Math.max(1,Object.keys(kb||{}).length))];
+ const l=kb&&topic?kb[topic]:null;
  const practiceOnly=p.syllabusStatus==="practice_only"||p.syllabusStatus==="complete";
- if(bank[topic]){
-   if(practiceOnly)return Object.assign({},bank[topic],{title:bank[topic].title+" — Practice",concept:"Syllabus is marked complete. Use this session for active recall, questions and mistakes instead of relearning the chapter."});
-   return bank[topic];
- }
- return {title:subject+" — "+(requested||"Current Topic"),concept:practiceOnly?"Practice the selected topic, review mistakes and solve questions instead of restarting the syllabus.":"This build does not yet contain a detailed lesson for the selected topic. Use your class or coaching material for the exact chapter while NEXORA uses the declared topic for planning.",formulas:["Key definition / rule","Key formula or method","One common mistake"],example:"Write one example from your current chapter, then solve a similar problem without looking at the solution.",practice:[["Write the main definition/rule from "+(requested||"today's topic")+".","Self-check"],["Solve one representative problem from "+(requested||"today's topic")+" without looking at the solution.","Self-check"]]};
+ if(l)return practiceOnly?Object.assign({},l,{title:l.title+" — Practice",concept:"Your syllabus is marked complete. Use this session for active recall, questions and mistake review instead of relearning the chapter."}):l;
+ return {title:subjectName+" — "+(requested||"Current Topic"),concept:practiceOnly?"Practice the selected topic, review mistakes and solve questions instead of restarting the syllabus.":"A detailed lesson for this selected topic is not yet in NEXORA's built-in knowledge bank. The selected topic is still used for planning so NEXORA does not silently restart you on another chapter.",formulas:["Write the key definition/rule","Write the key formula or method","Record one common mistake"],example:"Use your current study material to write one worked example, then solve a similar problem without looking at the answer.",practice:[["Write the main definition/rule from "+(requested||"today's topic")+".","Self-check"],["Solve one representative problem from "+(requested||"today's topic")+" without looking at the solution.","Self-check"]]};
 }
+
 function taskForDay(subject,i,day){
  const p=profile(),subs=subjects(),weak=String(p?.weak||"").toLowerCase().split(",").map(x=>x.trim()).filter(Boolean);
  const isWeak=weak.some(w=>subject.toLowerCase().includes(w)||w.includes(subject.toLowerCase()));
@@ -473,13 +549,17 @@ function openStudySession(taskId){
   <div class="session-actions"><button class="btn primary" onclick="completeStudyTask()">✓ Complete study session</button><button class="btn" onclick="setTimer(${Math.min(180,Math.max(10,task.minutes||25))})">⏱ Start focus timer</button></div>`;
  $("studySessionModal").classList.add("open");
 }
+function normalizeAnswer(s){return String(s||"").toLowerCase().replace(/[−–—]/g,"-").replace(/,/g,"").replace(/\s+/g," ").trim()}
 function checkPractice(i){
- const t=window._activeTask;if(!t)return;
- const val=$(`practice_${i}`).value.trim().toLowerCase(),ans=t.lesson.practice[i][1].toLowerCase();
- const ok=val===ans||val.includes(ans)||ans.includes(val)&&val.length>2;
- $(`practiceResult_${i}`).textContent=ok?"✓ Correct":"Not matched exactly — review the worked example and try again.";
- $(`practiceResult_${i}`).style.color=ok?"var(--accent)":"";
+ const task=window._activeTask;if(!task)return;
+ const q=task.lesson.practice?.[i];if(!q)return;
+ const input=normalizeAnswer($("practice_"+i).value),expected=normalizeAnswer(q[1]);
+ const aliases={"5 m/s":["5","5 m/s","5m/s"],"7 m":["7","7 m","7m"],"3 m/s²":["3","3 m/s2","3m/s2"],"2 mol":["2","2 mol"],"negative":["negative","-"],"2 and 3":["2,3","2 and 3","3,2"],"3/4":["0.75","3/4"],"4/5":["0.8","4/5"],"10 m/s":["10","10 m/s"],"kg":["kg","kilogram","kilograms"],"8":["8"],"11":["11"],"6.022 × 10²³":["6.022e23","6.022 x 10^23"]};
+ const ok=input===expected||(aliases[q[1]]||[]).some(a=>normalizeAnswer(a)===input);
+ $("practiceResult_"+i).textContent=ok?"✓ Correct — good.":"Not matched yet. Expected answer: "+q[1];
+ $("practiceResult_"+i).style.color=ok?"var(--good)":"var(--danger)";
 }
+
 function completeStudyTask(){
  const t=window._activeTask;if(!t)return;
  const beforeDay=cycleDay();
