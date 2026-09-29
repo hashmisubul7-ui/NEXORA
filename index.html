@@ -158,7 +158,7 @@ label.field>span{display:block;margin:0 0 7px}
 
 <!-- TIMETABLE -->
 <section id="page-timetable" class="page">
- <h1 class="page-title">Timetable</h1><p class="page-sub">A simple weekly plan generated from your selected subjects. <span class="muted small">NEXORA V10</span></p>
+ <h1 class="page-title">Timetable</h1><p class="page-sub">Your next 7 days are mapped directly to the 21-day roadmap, with real study-session links and weak-area focus.</p>
  <div id="timetable" class="day-grid"></div>
 </section>
 
@@ -641,22 +641,23 @@ function renderTimetable(){
  const p=profile(),box=$('timetable');
  if(!p){box.innerHTML='<div class="card section-card">Create your profile first.</div>';return}
  const subs=subjects(),total=minutes(p.time),weak=String(p.weak||'').toLowerCase().split(',').map(x=>x.trim()).filter(Boolean);
- const days=['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'];
- const today=new Date().toLocaleDateString('en-US',{weekday:'long'}),d=userData(),day=cycleDay();
+ const weekday=['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'];
+ const todayName=new Date().toLocaleDateString('en-US',{weekday:'long'}),d=userData(),current=cycleDay(),done=d.tasks||{},testDays=d.testDays||{};
  const weights=subs.map(s=>weak.some(x=>s.toLowerCase().includes(x)||x.includes(s.toLowerCase()))?1.5:1);
  const sum=weights.reduce((a,b)=>a+b,0)||1;
- const taskBySubject=new Map(allTasks().map(t=>[t.subject,t]));
- box.innerHTML=days.map((dayName,di)=>{
-   const primary=subs[di%subs.length]||'Study';
-   const secondary=subs.length>1?subs[(di+1)%subs.length]:null;
-   const chosen=[primary,secondary].filter((x,i,a)=>x&&a.indexOf(x)===i);
-   const items=chosen.map(s=>{
-     const i=subs.indexOf(s),w=weights[i]>1,share=Math.max(15,Math.round((total*weights[i]/sum)*(chosen.length===1?1:.62)));
-     const task=taskBySubject.get(s);
-     return `<div class="slot"><button class="btn small" onclick="${task?`openStudySession('${task.id}')`:`go('study')`}">${task?'Start session':'Open Study'}</button> 📚 <b>${esc(s)}</b> — ${share} min${w?' • weak-area focus':''}</div>`;
+ box.innerHTML=weekday.map((dayName,di)=>{
+   const cycleDayFor=((current-1+di)%21)+1;
+   const rows=subs.map((s,i)=>taskForDay(s,i,cycleDayFor));
+   const accessible=cycleDayFor===current||cycleDayFor<current;
+   const items=rows.map((t,i)=>{
+     const w=weights[i]>1;
+     const share=Math.max(15,Math.round(total*weights[i]/sum));
+     const doneNow=!!done[t.id];
+     return '<div class="slot"><button class="btn small" onclick="openStudySession(\''+t.id+'\')">'+(doneNow?'Review':'Start session')+'</button> 📚 <b>'+esc(t.subject)+'</b> — '+esc(roadmapTopicFor(t.subject,cycleDayFor))+' • '+share+' min'+(w?' • weak-area focus':'')+(doneNow?' • ✓ Done':'')+'</div>';
    }).join('');
-   const review=di===6?`<div class="slot">📝 <b>${[7,14,21].includes(day)?`Day ${day} progress test`:'Weekly review'}</b> — ${[7,14,21].includes(day)?'Complete Today’s test to unlock the next day.':'Review mistakes and unfinished work.'}</div>`:'';
-   return `<div class="day card" style="${dayName===today?'border-color:var(--accent)':''}"><h3>${dayName}${dayName===today?' • Today':''}</h3>${items||'<div class="muted small">No subjects selected.</div>'}${review}</div>`;
+   const test=[7,14,21].includes(cycleDayFor)?'<div class="slot">📝 <b>Day '+cycleDayFor+' Progress Test</b> — '+(testDays[cycleDayFor]?'Completed ✓':'Required after study sessions')+'</div>':'';
+   const marker=dayName===todayName?'border-color:var(--accent)':'';
+   return '<div class="day card" style="'+marker+'"><h3>'+dayName+(dayName===todayName?' • Today':'')+'</h3><div class="muted small" style="margin-bottom:8px">Roadmap Day '+cycleDayFor+' • '+(cycleDayFor<=7?'Foundation':cycleDayFor<=14?'Practice':'Test & Improve')+'</div>'+items+(test||'<div class="slot muted small">No progress test on this day.</div>')+'</div>';
  }).join('');
 }
 function toggleSlot(key){updateUserData(d=>{d.timetableDone=d.timetableDone||{};d.timetableDone[key]=!d.timetableDone[key];return d});renderTimetable();toast("Timetable updated")}
