@@ -343,6 +343,8 @@ function profile(){
  const normalized=normalizeSubjects(p.subjects,p);
  let changed=JSON.stringify(normalized)!==JSON.stringify(p.subjects);
  if(changed)p.subjects=normalized;
+ if(!p.syllabusStatus){p.syllabusStatus="not_started";changed=true}
+ if(!Array.isArray(p.completedChapters))p.completedChapters=[],changed=true;
  if(!Number.isInteger(p.studyDay)||p.studyDay<1||p.studyDay>21){p.studyDay=1;changed=true}
  if(!p.planStart){p.planStart=new Date().toISOString();changed=true}
  if(changed)saveState();
@@ -384,6 +386,19 @@ function currentDayComplete(){
  return tasks.length>0 && tasks.every(t=>done[t.id]===true);
 }
 function completedSessionCount(){return Object.values(userData().tasks||{}).filter(Boolean).length}
+const curriculumCatalog={
+ "JEE Main":{subjects:["Mathematics","Physics","Chemistry"],topics:{"Mathematics":["Sets, Relations & Functions","Quadratic Equations","Trigonometry","Sequences & Series","Coordinate Geometry"],"Physics":["Units & Measurements","Kinematics","Newton's Laws","Work, Energy & Power","Rotational Motion"],"Chemistry":["Some Basic Concepts of Chemistry","Atomic Structure","Chemical Bonding","Thermodynamics","Equilibrium"]}},
+ "JEE Advanced":{subjects:["Mathematics","Physics","Chemistry"],topics:{"Mathematics":["Sets, Relations & Functions","Quadratic Equations","Trigonometry","Sequences & Series","Coordinate Geometry"],"Physics":["Units & Measurements","Kinematics","Newton's Laws","Work, Energy & Power","Rotational Motion"],"Chemistry":["Some Basic Concepts of Chemistry","Atomic Structure","Chemical Bonding","Thermodynamics","Equilibrium"]}},
+ "NEET":{subjects:["Physics","Chemistry","Biology"],topics:{"Physics":["Units & Measurements","Kinematics","Newton's Laws","Work, Energy & Power"],"Chemistry":["Some Basic Concepts of Chemistry","Atomic Structure","Chemical Bonding","Thermodynamics"],"Biology":["The Living World","Cell: The Unit of Life","Biomolecules","Human Physiology"]}},
+ "NDA":{subjects:["Mathematics","General Ability Test"],topics:{"Mathematics":["Algebra","Trigonometry","Coordinate Geometry","Calculus Basics"],"General Ability Test":["English","General Science","History","Geography","Current Affairs"]}},
+ "UPSC":{subjects:["General Studies","Essay","Optional Subject"],topics:{"General Studies":["Indian Polity","History","Geography","Economy","Environment"],"Essay":["Essay Structure","Argument & Evidence","Introduction and Conclusion"],"Optional Subject":["Choose your UPSC optional subject"]}},
+ "CUET":{subjects:["Language","Domain Subject","General Aptitude"],topics:{"Language":["Reading Comprehension","Vocabulary","Grammar"],"Domain Subject":["Select your domain syllabus"],"General Aptitude":["Quantitative Aptitude","Logical Reasoning","General Awareness"]}},
+ "SSC":{subjects:["General Intelligence & Reasoning","Quantitative Aptitude","English","General Awareness"],topics:{}},
+ "CAT":{subjects:["VARC","DILR","Quantitative Ability"],topics:{}},
+ "GATE":{subjects:["General Aptitude","Engineering Subject"],topics:{}}
+};
+function curriculumForProfile(p){return curriculumCatalog[String(p?.exam||p?.examKey||"")]||null}
+function curriculumSubjects(p){const c=curriculumForProfile(p);return c?c.subjects:null}
 const lessonBank={
  "physics":{
   "kinematics":{title:"Kinematics — Motion Basics",concept:"Kinematics describes motion using displacement, velocity and acceleration without focusing on its cause.",formulas:["v = u + at","s = ut + ½at²","v² = u² + 2as"],example:"A body starts from rest and accelerates at 2 m/s² for 5 s. v = 0 + 2×5 = 10 m/s.",practice:[["A car starts from rest with a=3 m/s² for 4 s. Find v.","12 m/s"],["If u=5 m/s, a=2 m/s² and t=3 s, find v.","11 m/s"]]},
@@ -560,9 +575,9 @@ function completeGoal(){
  p.goalDone=true;saveState();toast("Goal completed. Now edit your profile to set a new goal.");renderAll();go("profile");
 }
 
-function setTimer(min){pauseTimer();timerInitial=Math.max(5,Math.min(180,Number(min)))*60;timerSec=timerInitial;updateTimer()}
-function setCustomTimer(){let n=Number($("customTimer").value);if(!n||n<5||n>180){toast("Choose 5–180 minutes.");return}setTimer(n)}
-function updateTimer(){$("timer").textContent=String(Math.floor(timerSec/60)).padStart(2,"0")+":"+String(timerSec%60).padStart(2,"0")}
+function setTimer(min){pauseTimer();timerInitial=Math.max(5,Math.min(1440,Number(min)))*60;timerSec=timerInitial;updateTimer()}
+function setCustomTimer(){let n=Number($("customTimer").value);if(!n||n<5||n>1440){toast("Choose 5–1440 minutes (up to 24 hours).");return}setTimer(n)}
+function updateTimer(){const h=Math.floor(timerSec/3600),m=Math.floor((timerSec%3600)/60),s=timerSec%60;$("timer").textContent=h>0?String(h).padStart(2,"0")+":"+String(m).padStart(2,"0")+":"+String(s).padStart(2,"0"):String(m).padStart(2,"0")+":"+String(s).padStart(2,"0")}
 function startTimer(){if(timerId)return;timerId=setInterval(()=>{if(timerSec<=0){pauseTimer();updateUserData(d=>{d.focusSessions=d.focusSessions||[];d.focusSessions.unshift({minutes:Math.round(timerInitial/60),date:new Date().toISOString()});return d});toast("Focus session complete 🎉");renderAll();return}timerSec--;updateTimer()},1000)}
 function pauseTimer(){if(timerId){clearInterval(timerId);timerId=null}}
 function resetTimer(){pauseTimer();timerSec=timerInitial;updateTimer()}
@@ -654,19 +669,21 @@ $("board").addEventListener("change",()=>{$("otherBoardField").classList.toggle(
 function updateGoal(){
  const g=$("goal").value;
  $("percentField").classList.toggle("hidden",g!=="percent");$("customGoalField").classList.toggle("hidden",g!=="custom");$("examField").classList.toggle("hidden",g!=="competitive");
- if(g!=="competitive")$("otherExamField").classList.add("hidden");
+ if(g!=="competitive")$("otherExamField").classList.add("hidden"); renderSubjects();
 }
-$("exam").addEventListener("change",()=>{$("otherExamField").classList.toggle("hidden",$("exam").value!=="Other")});
+$("exam").addEventListener("change",()=>{$("otherExamField").classList.toggle("hidden",$("exam").value!=="Other");renderSubjects()});
 function renderSubjects(){
- const college=$("eduType").value==="college",stream=$("stream").value;
- let a=college?["Physics","Chemistry","Mathematics","Biology","English","Computer Science","Other"]:
+ const college=$("eduType").value==="college",stream=$("stream").value,exam=$("exam")?.value||"";
+ const catalog=($("goal")?.value==="competitive"&&curriculumCatalog[exam])?curriculumCatalog[exam].subjects:null;
+ let a=catalog?[...catalog,"Other"]:
+ college?["Physics","Chemistry","Mathematics","Biology","English","Computer Science","Other"]:
  stream==="maths"?["Mathematics","Physics","Chemistry","English","Computer Science","Physical Education","Other"]:
  stream==="bio"?["Biology","Physics","Chemistry","English","Computer Science","Physical Education","Other"]:
  stream==="commerce"?["Accountancy","Business Studies","Economics","Mathematics","English","Computer Science","Other"]:
  stream==="humanities"?["History","Geography","Political Science","Economics","English","Sociology","Psychology","Other"]:
  ["Mathematics","Science","English","Hindi","Social Science","Computer / IT","Other"];
  const old=new Set([...document.querySelectorAll("#subjects input:checked")].map(x=>x.value));
- $("subjects").innerHTML=a.map(s=>`<label class="check"><input type="checkbox" value="${esc(s)}" ${old.has(s)?"checked":""}>${esc(s)}</label>`).join("");
+ $("subjects").innerHTML=a.map(s=>'<label class="check"><input type="checkbox" value="'+esc(s)+'" '+(old.has(s)?"checked":"")+'>'+esc(s)+'</label>').join("");
 }
 function openStudent(){
  const p=profile()||{};$("studentError").textContent="";
@@ -676,6 +693,7 @@ function openStudent(){
  $("goal").value=p.goalKey||"top";$("targetPercent").value=p.target||"";$("customGoal").value=p.customGoal||"";
  $("exam").value=p.examKey||"JEE Main";$("otherExam").value=p.exam&&!["JEE Main","JEE Advanced","NEET","CUET","UPSC"].includes(p.exam)?p.exam:"";
  $("studyTime").value=p.time||"2 hours";$("level").value=p.level||"Intermediate";$("strong").value=p.strong||"";$("weak").value=p.weak||"";$("pastWork").value=p.pastWork||"";
+$("syllabusStatus").value=p.syllabusStatus||"not_started";$("currentSubject").value=p.currentSubject||"";$("currentTopic").value=p.currentTopic||"";$("completedChapters").value=(p.completedChapters||[]).join(", ");
  updateEducation();updateStream();updateGoal();$("board").dispatchEvent(new Event("change"));$("exam").dispatchEvent(new Event("change"));
  setTimeout(()=>{let chosen=new Set(p.subjects||[]);document.querySelectorAll("#subjects input").forEach(x=>x.checked=chosen.has(x.value))},0);
  openModal("studentModal");
@@ -684,19 +702,19 @@ function saveStudent(){
  const college=$("eduType").value==="college",board=$("board").value==="Other"?$("otherBoard").value.trim():$("board").value;
  const streamKey=$("stream").value,stream=streamKey==="other"?$("otherStream").value.trim():streamKey;
  const g=$("goal").value,examKey=$("exam").value,exam=examKey==="Other"?$("otherExam").value.trim():examKey;
- const subs=[...document.querySelectorAll("#subjects input:checked")].map(x=>x.value).filter(x=>x!=="Other");
+ let subs=[...document.querySelectorAll("#subjects input:checked")].map(x=>x.value).filter(x=>x!=="Other"); const catalog=curriculumSubjects({exam:exam,examKey:examKey}); if(g==="competitive"&&catalog)subs=[...catalog];
  if(!board||(!college&&!stream)||!subs.length){$("studentError").textContent="Please select board/stream and at least one subject.";return}
  if(g==="competitive"&&!exam){$("studentError").textContent="Please choose a competitive exam or write Other.";return}
  if(g==="custom"&&!$("customGoal").value.trim()){$("studentError").textContent="Please write your goal.";return}
  let goalText={top:"Top my class",percent:"Achieve "+($("targetPercent").value||"")+"%",subject:"Become strong in my subjects",exam:"Prepare for my exam",competitive:"Prepare for "+exam,next:"Prepare for the next class",custom:$("customGoal").value.trim()}[g];
- const u=current();u.profile={type:college?"college":"school",board,className:college?"College":$("classSel").value,streamKey,stream,goalKey:g,goalText,target:$("targetPercent").value,customGoal:$("customGoal").value,examKey,exam,time:$("studyTime").value,level:$("level").value,strong:$("strong").value.trim(),weak:$("weak").value.trim(),pastWork:$("pastWork").value.trim(),subjects:subs,goalDone:false,planStart:(current()?.profile?.planStart||new Date().toISOString()),studyDay:(current()?.profile?.studyDay||1)};
+ const oldProfile=current()?.profile||{}; const completedChapters=$("completedChapters").value.split(",").map(x=>x.trim()).filter(Boolean); const u=current();u.profile={type:college?"college":"school",board,className:college?"College":$("classSel").value,streamKey,stream,goalKey:g,goalText,target:$("targetPercent").value,customGoal:$("customGoal").value,examKey,exam,time:$("studyTime").value,level:$("level").value,strong:$("strong").value.trim(),weak:$("weak").value.trim(),pastWork:$("pastWork").value.trim(),subjects:subs,syllabusStatus:$("syllabusStatus").value,currentSubject:$("currentSubject").value.trim(),currentTopic:$("currentTopic").value.trim(),completedChapters:completedChapters,goalDone:false,planStart:(oldProfile.planStart||new Date().toISOString()),studyDay:(oldProfile.studyDay||1),cycleCount:(oldProfile.cycleCount||0)};
  saveState();closeModal("studentModal");renderAll();toast("Profile saved — timetable, roadmap and tasks updated.");go("home");
 }
 function renderProfile(){
  const u=current(),p=profile();if(!u)return;
  $("accountRows").innerHTML=`<div class="profile-row"><span>Name</span><b>${esc(u.name)}</b></div><div class="profile-row"><span>Email</span><b>${esc(u.email)}</b></div><div class="profile-row"><span>Plan</span><b>${esc(u.plan||"Free")}</b></div>`;
  if(!p){$("profileRows").innerHTML='<p class="muted">No student profile yet.</p>';return}
- const rows=[["Education",p.type],["Board",p.board],["Class",p.className],["Stream",p.stream],["Subjects",(p.subjects||[]).join(", ")],["Goal",p.goalText],["Competitive exam",p.exam],["Daily study",p.time],["Level",p.level],["Strong",p.strong],["Weak",p.weak],["Past work",p.pastWork]];
+ const statusLabel={not_started:"Haven't started",current:"Currently studying",some_done:"Some chapters completed",complete:"Syllabus completed",practice_only:"Syllabus complete — practice/tests only"}; const rows=[["Education",p.type],["Board",p.board],["Class",p.className],["Stream",p.stream],["Subjects",(p.subjects||[]).join(", ")],["Goal",p.goalText],["Competitive exam",p.exam],["Syllabus status",statusLabel[p.syllabusStatus]||p.syllabusStatus],["Current subject",p.currentSubject],["Current topic",p.currentTopic],["Completed chapters",(p.completedChapters||[]).join(", ")],["Daily study",p.time],["Level",p.level],["Strong",p.strong],["Weak",p.weak],["Past work",p.pastWork]];
  $("profileRows").innerHTML=rows.filter(x=>x[1]).map(x=>`<div class="profile-row"><span>${esc(x[0])}</span><b>${esc(x[1])}</b></div>`).join("");
 }
 window.addEventListener("click",e=>{if(e.target.classList.contains("modal"))e.target.classList.remove("open")});
