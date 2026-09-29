@@ -572,9 +572,10 @@ function checkPractice(i){
  const q=task.lesson.practice?.[i];if(!q)return;
  const input=normalizeAnswer($("practice_"+i).value),expected=normalizeAnswer(q[1]);
  const aliases={"5 m/s":["5","5 m/s","5m/s"],"7 m":["7","7 m","7m"],"3 m/s²":["3","3 m/s2","3m/s2"],"2 mol":["2","2 mol"],"negative":["negative","-"],"2 and 3":["2,3","2 and 3","3,2"],"3/4":["0.75","3/4"],"4/5":["0.8","4/5"],"10 m/s":["10","10 m/s"],"kg":["kg","kilogram","kilograms"],"8":["8"],"11":["11"],"6.022 × 10²³":["6.022e23","6.022 x 10^23"]};
- const ok=input===expected||(aliases[q[1]]||[]).some(a=>normalizeAnswer(a)===input);
- $("practiceResult_"+i).textContent=ok?"✓ Correct — good.":"Not matched yet. Expected answer: "+q[1];
- $("practiceResult_"+i).style.color=ok?"var(--good)":"var(--danger)";
+ const selfCheck=expected==="self-check";
+ const ok=selfCheck?input.length>0:(input===expected||(aliases[q[1]]||[]).some(a=>normalizeAnswer(a)===input));
+ $("practiceResult_"+i).textContent=ok?(selfCheck?"✓ Response recorded — compare it with your notes.":"✓ Correct — good."):"Not matched yet. Expected answer: "+q[1];
+ $("practiceResult_"+i).style.color=ok?"var(--success)":"var(--danger)";
 }
 
 function completeStudyTask(){
