@@ -510,22 +510,33 @@ function lessonFor(subject){
  return {title:subjectName+" — "+(requested||"Current Topic"),concept:practiceOnly?"Practice the selected topic, review mistakes and solve questions instead of restarting the syllabus.":"A detailed lesson for this selected topic is not yet in NEXORA's built-in knowledge bank. The selected topic is still used for planning so NEXORA does not silently restart you on another chapter.",formulas:["Write the key definition/rule","Write the key formula or method","Record one common mistake"],example:"Use your current study material to write one worked example, then solve a similar problem without looking at the answer.",practice:[["Write the main definition/rule from "+(requested||"today's topic")+".","Self-check"],["Solve one representative problem from "+(requested||"today's topic")+" without looking at the solution.","Self-check"]]};
 }
 
+function lessonForTopic(subject,requestedTopic){
+ const p=profile()||{},subjectName=String(subject||""),requested=String(requestedTopic||"").trim();
+ const kb=knowledgeBank[subjectName]||knowledgeBank[subjectName==="Physics"?"Physics":subjectName==="Chemistry"?"Chemistry":subjectName==="Mathematics"?"Mathematics":""];
+ const topic=Object.keys(kb||{}).find(t=>t.toLowerCase()===requested.toLowerCase())||Object.keys(kb||{}).find(t=>requested&&t.toLowerCase().includes(requested.toLowerCase()));
+ const l=kb&&topic?kb[topic]:null;
+ const practiceOnly=p.syllabusStatus==="practice_only"||p.syllabusStatus==="complete";
+ if(l)return practiceOnly?Object.assign({},l,{title:l.title+" — Practice",concept:"Your syllabus is marked complete. Use this session for active recall, questions and mistake review instead of relearning the chapter."}):l;
+ return {title:subjectName+" — "+(requested||"Current Topic"),concept:practiceOnly?"Practice the selected topic, review mistakes and solve questions instead of restarting the syllabus.":"This topic is from your selected curriculum. NEXORA does not yet have a full built-in lesson for it, so use your current study material and the practice prompts below.",formulas:["Write the key definition/rule","Write the key formula or method","Record one common mistake"],example:"Use your current study material to write one worked example, then solve a similar problem without looking at the answer.",practice:[["Write the main definition/rule from "+(requested||"today's topic")+".","Self-check"],["Solve one representative problem from "+(requested||"today's topic")+" without looking at the solution.","Self-check"]]};
+}
+
 function taskForDay(subject,i,day){
  const p=profile(),subs=subjects(),weak=String(p?.weak||"").toLowerCase().split(",").map(x=>x.trim()).filter(Boolean);
  const mistakes=(userData().mistakes||[]).slice(0,20);
- const currentTopic=String(p?.currentTopic||"").toLowerCase();
+ const roadmapTopic=roadmapTopicFor(subject,day);
+ const currentTopic=String(roadmapTopic||"").toLowerCase();
  const subjectMistakes=mistakes.filter(m=>String(m.question||"").toLowerCase().includes(currentTopic)||String(m.question||"").toLowerCase().includes(String(subject||"").toLowerCase()));
  const isWeak=weak.some(w=>subject.toLowerCase().includes(w)||w.includes(subject.toLowerCase()))||subjectMistakes.length>0;
- const l=lessonFor(subject),practiceOnly=p?.syllabusStatus==="practice_only"||p?.syllabusStatus==="complete";
+ const l=lessonForTopic(subject,roadmapTopic);
+ const practiceOnly=p?.syllabusStatus==="practice_only"||p?.syllabusStatus==="complete";
  const mode=practiceOnly?"Practice":"Study";
- const weights=subs.map(x=>weak.some(w=>x.toLowerCase().includes(w)||w.includes(x))?1.5:1);
+ const weights=subs.map(x=>weak.some(w=>x.toLowerCase().includes(w)||w.includes(x.toLowerCase()))?1.5:1);
  const sum=weights.reduce((a,b)=>a+b,0)||1;
  let share=Math.max(10,Math.round(minutes(p?.time)*((isWeak?1.5:1))/sum));
  if(subjectMistakes.length)share=Math.max(share,Math.min(60,share+10));
  const focus=subjectMistakes.length?"Mistake review • ":isWeak?"Weak-area focus • ":"";
- return {id:"d"+day+"_"+i,subject,title:(isWeak?"Focus: ":"")+mode+": "+subject+" — "+l.title.split(" — ").pop(),meta:focus+(practiceOnly?"Practice → questions → mistakes":"Learn → example → practice")+" • "+share+" min",minutes:share,lesson:l};
+ return {id:"d"+day+"_"+i,subject,title:(isWeak?"Focus: ":"")+mode+": "+subject+" — "+l.title.split(" — ")[0],meta:focus+(practiceOnly?"Practice → questions → mistakes":"Learn → example → practice")+" • "+share+" min",minutes:share,lesson:l};
 }
-
 function allTasks(){
  const day=cycleDay();
  return subjects().map((s,i)=>taskForDay(s,i,day));
@@ -568,6 +579,12 @@ function checkPractice(i){
 
 function completeStudyTask(){
  const t=window._activeTask;if(!t)return;
+ const inputs=t.lesson.practice||[];
+ const unchecked=inputs.map((_,i)=>$("practiceResult_"+i)?.textContent||"").filter(x=>!x.startsWith("✓ Correct"));
+ if(inputs.length&&unchecked.length){
+   toast("Check every practice question before completing this session.");
+   return;
+ }
  const beforeDay=cycleDay();
  updateUserData(d=>{
    d.tasks=d.tasks||{};
