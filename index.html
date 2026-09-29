@@ -643,24 +643,48 @@ function renderTimetable(){
 }
 function toggleSlot(key){updateUserData(d=>{d.timetableDone=d.timetableDone||{};d.timetableDone[key]=!d.timetableDone[key];return d});renderTimetable();toast("Timetable updated")}
 
-function renderRoadmap(){
- const p=profile(),day=cycleDay();
- if(!p){$('roadmap').innerHTML='<div class="card section-card">Create your profile first.</div>';return}
- const steps=[
-  ['1','Foundation','Days 1–7: learn core concepts and complete guided study sessions.',1,7],
-  ['2','Practice','Days 8–14: increase practice and focus on weak areas.',8,14],
-  ['3','Test & Improve','Days 15–21: revise mistakes and strengthen weak topics.',15,21],
-  ['4','Next Cycle','After Day 21: the next 21-day cycle uses your mistakes and unfinished work.',22,999]
- ];
- $('roadmap').innerHTML=steps.map(x=>{
-   const active=day>=x[3]&&day<=x[4],done=day>x[4],status=done?'✓ Completed':active?`● Current — Day ${day}`:'🔒 Locked';
-   return `<div class="road card" style="${active?'border-color:var(--accent)':''}"><div class="road-num">${x[0]}</div><div><b>${x[1]} ${active?'• Current':''}</b><div class="muted small" style="margin-top:5px">${x[2]}</div><div class="small" style="margin-top:9px;color:${active?'var(--accent)':'var(--muted)'};font-weight:800">${status}</div></div></div>`;
- }).join('');
- const completed=currentDayComplete();
- const testPending=[7,14,21].includes(day)&&completed&&!((userData().testDays||{})[day]);
- const h=userData().history||[];
- $('history').innerHTML=`<h3>Cycle status</h3><p class="muted">Day ${day}/21 • ${phase()} • ${progress()}% cycle progress.</p><div class="notice">${testPending?`Day ${day} study sessions are complete. Take the progress test in Today to unlock Day ${day+1>21?'1':day+1}.`:`Complete every Today study session to unlock the next day.${[7,14,21].includes(day)?' On test days, the progress test is also required.':''}`}</div><h3 style="margin-top:16px">Completed goals</h3>`+(h.length?h.map(x=>`<div class="profile-row"><span>${esc(x.goal)}</span><b>✓ ${new Date(x.date).toLocaleDateString()}</b></div>`).join(''):'<p class="muted">No completed goals yet.</p>');
+function roadmapTopicFor(subject,day){
+ const p=profile()||{},cat=curriculumForProfile(p),topics=cat?.topics?.[subject]||[];
+ const requested=(String(p.currentSubject||"").toLowerCase()===String(subject||"").toLowerCase())?String(p.currentTopic||""):"";
+ if(requested&&day===1)return requested;
+ if(topics.length)return topics[(day-1)%topics.length];
+ return lessonFor(subject).title.split(" — ").pop();
 }
+function renderRoadmap(){
+ const p=profile(),day=cycleDay(),d=userData();
+ if(!p){$("roadmap").innerHTML='<div class="card section-card">Create your profile first.</div>';return}
+ const done=d.tasks||{},mistakes=d.mistakes||[],testDays=d.testDays||{},subs=subjects();
+ const phases=[["1","Foundation","Days 1–7: concepts, examples and guided practice.",1,7],["2","Practice","Days 8–14: more practice with weak-area focus.",8,14],["3","Test & Improve","Days 15–21: mistakes, revision and progress tests.",15,21]];
+ let html=phases.map(x=>{
+  const active=day>=x[3]&&day<=x[4],finished=day>x[4];
+  const status=finished?"✓ Completed":active?"● Current — Day "+day:"🔒 Locked";
+  return '<div class="road card" style="'+(active?'border-color:var(--accent)':'')+'"><div class="road-num">'+x[0]+'</div><div><b>'+x[1]+(active?' • Current':'')+'</b><div class="muted small" style="margin-top:5px">'+x[2]+'</div><div class="small" style="margin-top:9px;color:'+(active?'var(--accent)':'var(--muted)')+';font-weight:800">'+status+'</div></div></div>';
+ }).join("");
+ html+='<div class="card section-card" style="margin-top:18px"><h3>📚 21-Day Topic Roadmap</h3><p class="muted small">Topics come from your selected curriculum and current study position. Days unlock from real completion, not just calendar time.</p>';
+ for(let n=1;n<=21;n++){
+  const accessible=n<=day, current=n===day;
+  const rows=subs.map((sub,i)=>({sub,id:"d"+n+"_"+i,topic:roadmapTopicFor(sub,n)}));
+  const finished=rows.filter(x=>done[x.id]).length;
+  const testRequired=[7,14,21].includes(n),testDone=!!testDays[n];
+  const status=n<day?"✓ Completed":current?"● Current":"🔒 Locked";
+  html+='<div class="card" style="margin-top:10px;padding:12px;'+(current?'border-color:var(--accent)':'')+'"><div style="display:flex;justify-content:space-between;gap:10px"><div><b>Day '+n+'</b><div class="muted small">'+(n<=7?'Foundation':n<=14?'Practice':'Test & Improve')+' • '+status+'</div></div><b class="small">'+finished+'/'+rows.length+' sessions</b></div>';
+  if(accessible){
+   html+=rows.map(x=>'<div class="profile-row"><span>'+esc(x.sub)+' — '+esc(x.topic)+'</span><b>'+(done[x.id]?'✓ Done':current?'Today':'Planned')+'</b></div>').join("");
+   if(testRequired)html+='<div class="notice small" style="margin-top:8px">📝 Progress test: '+(testDone?'Completed ✓':'Required to unlock the next day')+'</div>';
+  }else{
+   html+='<div class="muted small" style="margin-top:9px">Complete the previous day to unlock this day.</div>';
+  }
+  html+='</div>';
+ }
+ html+='</div>';
+ const pending=[7,14,21].includes(day)&&allTasks().every(t=>done[t.id])&&!testDays[day];
+ html+='<div class="card section-card" style="margin-top:18px"><h3>Current learning state</h3><div class="profile-row"><span>Syllabus status</span><b>'+esc(p.syllabusStatus||"Not set")+'</b></div><div class="profile-row"><span>Current topic</span><b>'+esc(p.currentTopic||"Not set")+'</b></div><div class="profile-row"><span>Recorded mistakes</span><b>'+mistakes.length+'</b></div><div class="notice" style="margin-top:10px">'+(pending?'Today is ready for its progress test. Open Today to take it and unlock the next day.':'Complete every Today session to advance the roadmap.')+'</div></div>';
+ html+='<div class="card section-card" style="margin-top:18px"><h3>Recent mistakes</h3>'+(mistakes.length?mistakes.slice(0,5).map(m=>'<div class="profile-row"><span>'+esc(m.question)+'</span><b>Review</b></div>').join(""):'<p class="muted">No test mistakes recorded yet.</p>')+'</div>';
+ $("roadmap").innerHTML=html;
+ const h=d.history||[];
+ $("history").innerHTML='<h3>Goal / cycle status</h3><p class="muted">Day '+day+'/21 • '+phase()+' • '+progress()+'% cycle progress.</p><p class="muted small">Cycle '+(Number(p.cycleCount||0)+1)+'. Progress is based on completed study sessions and required tests.</p><h3 style="margin-top:16px">Completed goals</h3>'+(h.length?h.map(x=>'<div class="profile-row"><span>'+esc(x.goal)+'</span><b>✓ '+new Date(x.date).toLocaleDateString()+'</b></div>').join(""):'<p class="muted">No completed goals yet.</p>');
+}
+
 function completeGoal(){
  const p=profile();if(!p){toast("Create a goal first.");return}
  if(!confirm("Mark this goal as completed? The ₹1499 plan is treated as one goal cycle."))return;
