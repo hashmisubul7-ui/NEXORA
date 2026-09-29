@@ -512,14 +512,20 @@ function lessonFor(subject){
 
 function taskForDay(subject,i,day){
  const p=profile(),subs=subjects(),weak=String(p?.weak||"").toLowerCase().split(",").map(x=>x.trim()).filter(Boolean);
- const isWeak=weak.some(w=>subject.toLowerCase().includes(w)||w.includes(subject.toLowerCase()));
+ const mistakes=(userData().mistakes||[]).slice(0,20);
+ const currentTopic=String(p?.currentTopic||"").toLowerCase();
+ const subjectMistakes=mistakes.filter(m=>String(m.question||"").toLowerCase().includes(currentTopic)||String(m.question||"").toLowerCase().includes(String(subject||"").toLowerCase()));
+ const isWeak=weak.some(w=>subject.toLowerCase().includes(w)||w.includes(subject.toLowerCase()))||subjectMistakes.length>0;
  const l=lessonFor(subject),practiceOnly=p?.syllabusStatus==="practice_only"||p?.syllabusStatus==="complete";
  const mode=practiceOnly?"Practice":"Study";
- const weights=subs.map(x=>weak.some(w=>x.toLowerCase().includes(w)||w.includes(x.toLowerCase()))?1.5:1);
+ const weights=subs.map(x=>weak.some(w=>x.toLowerCase().includes(w)||w.includes(x))?1.5:1);
  const sum=weights.reduce((a,b)=>a+b,0)||1;
- const share=Math.max(10,Math.round(minutes(p?.time)*((isWeak?1.5:1))/sum));
- return {id:"d"+day+"_"+i,subject,title:(isWeak?"Focus: ":"")+mode+": "+subject+" — "+l.title.split(" — ").pop(),meta:(isWeak?"Weak-area focus • ":"")+(practiceOnly?"Practice → questions → mistakes":"Learn → example → practice")+" • "+share+" min",minutes:share,lesson:l};
+ let share=Math.max(10,Math.round(minutes(p?.time)*((isWeak?1.5:1))/sum));
+ if(subjectMistakes.length)share=Math.max(share,Math.min(60,share+10));
+ const focus=subjectMistakes.length?"Mistake review • ":isWeak?"Weak-area focus • ":"";
+ return {id:"d"+day+"_"+i,subject,title:(isWeak?"Focus: ":"")+mode+": "+subject+" — "+l.title.split(" — ").pop(),meta:focus+(practiceOnly?"Practice → questions → mistakes":"Learn → example → practice")+" • "+share+" min",minutes:share,lesson:l};
 }
+
 function allTasks(){
  const day=cycleDay();
  return subjects().map((s,i)=>taskForDay(s,i,day));
@@ -718,19 +724,31 @@ function generateQuestions(){
 }
 
 function testQuestions(){
- return [
-  ["A body starts from rest with acceleration 2 m/s² for 5 s. Its final velocity is?","10 m/s",["5 m/s","10 m/s","15 m/s","20 m/s"]],
-  ["If net force on a body is zero, its acceleration is?","0",["0","1 m/s²","9.8 m/s²","Cannot say"]],
-  ["One mole contains approximately?","6.022×10²³",["6.022×10²³","3.14×10²³","9.8×10²³","1.0×10²³"]],
-  ["Roots of x²−5x+6=0 are?","2, 3",["1, 6","2, 3","-2, -3","3, 5"]],
-  ["sin²θ + cos²θ equals?","1",["0","1","2","sinθ"]]
- ];
+ const p=profile()||{},tasks=allTasks(),seen=new Set(),qs=[];
+ tasks.forEach(t=>{
+   (t.lesson.practice||[]).forEach(q=>{
+     const key=q[0];if(seen.has(key))return;seen.add(key);
+     const correct=q[1],options=[correct];
+     const distractors=["0","1","2","3","4","5","6","10","12","20","25","50","100","None of these"].filter(x=>x!==correct);
+     while(options.length<4){const x=distractors[options.length-1];if(x&&!options.includes(x))options.push(x);else break}
+     while(options.length<4)options.push("Not sure");
+     qs.push([q[0],correct,options]);
+   });
+ });
+ if(qs.length<5){
+   const fallback=[
+    ["What should you do when you make a repeated mistake?","Review the concept and practise the weak point",["Skip it permanently","Review the concept and practise the weak point","Only increase study hours","Start a random chapter"]],
+    ["What does a completed study session record in NEXORA?","The session and its completion status",["Only a timer value","The session and its completion status","A verified board result","A paid subscription"]]
+   ];
+   fallback.forEach(q=>{if(qs.length<5)qs.push(q)});
+ }
+ return qs.slice(0,5);
 }
 function openProgressTest(){
  const day=cycleDay(),qs=testQuestions();
  $("sessionTitle").textContent=`Day ${day} Progress Test`;
- $("sessionMeta").textContent="5 questions • Submit to record your score and mistakes";
- $("sessionBody").innerHTML=`<div class="notice">This is a NEXORA practice test. Questions are original practice questions, not claimed as verified PYQs.</div>`+
+ $("sessionMeta").textContent=`${qs.length} questions • Submit to record your score and mistakes`;
+ $("sessionBody").innerHTML=`<div class="notice">This is an original NEXORA practice test. The test is built from the lessons currently assigned to you; it is not claimed to be a verified PYQ.</div>`+
  qs.map((x,i)=>`<div class="practice-q"><b>${i+1}. ${esc(x[0])}</b>${x[2].map(o=>`<label class="test-option"><input type="radio" name="test_${i}" value="${esc(o)}">${esc(o)}</label>`).join("")}</div>`).join("")+
  `<div class="session-actions"><button class="btn primary" onclick="submitProgressTest()">Submit test</button></div><div id="testResult"></div>`;
  $("studySessionModal").classList.add("open");
@@ -738,11 +756,25 @@ function openProgressTest(){
 function submitProgressTest(){
  const qs=testQuestions(),day=cycleDay();let score=0,mistakes=[];
  qs.forEach((x,i)=>{const el=document.querySelector(`input[name="test_${i}"]:checked`);if(el&&el.value===x[1])score++;else mistakes.push({question:x[0],correct:x[1],chosen:el?el.value:"Not answered"});});
- updateUserData(d=>{d.tests=d.tests||[];d.tests.unshift({day,score,total:qs.length,mistakes,date:new Date().toISOString()});d.testDays=d.testDays||{};d.testDays[day]=true;return d});
+ updateUserData(d=>{
+   d.tests=d.tests||[];
+   d.tests.unshift({day,score,total:qs.length,mistakes,date:new Date().toISOString()});
+   d.mistakes=d.mistakes||[];
+   mistakes.forEach(m=>d.mistakes.unshift(Object.assign({day,date:new Date().toISOString()},m)));
+   d.testDays=d.testDays||{};
+   d.testDays[day]=true;
+   d.lastTest={day,score,total:qs.length};
+   return d
+ });
+ const pct=Math.round(score/Math.max(1,qs.length)*100);
+ if(pct<60)toast("Test saved. Weak areas will be prioritised in upcoming sessions.");
+ else if(pct<80)toast("Test saved. Keep reviewing the missed questions.");
+ else toast("Test saved. Strong result — continue with the next day.");
  advanceStudyDay('test-complete');
- $("testResult").innerHTML=`<div class="lesson-block"><h3>Score: ${score}/${qs.length}</h3><p>${mistakes.length?mistakes.length+" mistake(s) saved for revision.":"Excellent — no mistakes recorded."}</p>${mistakes.map(m=>`<div class="muted small" style="margin-top:7px">• ${esc(m.question)}<br>Correct: ${esc(m.correct)} • Your answer: ${esc(m.chosen)}</div>`).join("")}</div><button class="btn primary" style="margin-top:10px" onclick="closeStudySession();renderAll()">Continue</button>`;
+ $("testResult").innerHTML=`<div class="lesson-block"><h3>Score: ${score}/${qs.length} (${pct}%)</h3><p>${mistakes.length?mistakes.length+" mistake(s) saved for revision.":"No mistakes recorded."}</p>${mistakes.map(m=>`<div class="muted small" style="margin-top:7px">• ${esc(m.question)}<br>Correct: ${esc(m.correct)} • Your answer: ${esc(m.chosen)}</div>`).join("")}</div><button class="btn primary" style="margin-top:10px" onclick="closeStudySession();renderAll()">Continue</button>`;
  renderHome();
 }
+
 function esc(s){return String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]))}
 
 function updateEducation(){
