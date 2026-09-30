@@ -613,7 +613,7 @@ function completeStudyTask(){
  }
  renderAll();
 }
-function closeStudySession(){ $("studySessionModal").classList.remove("open");window._activeTask=null; }
+function closeStudySession(){activeTestQuestions=[]; $("studySessionModal").classList.remove("open");window._activeTask=null; }
 function renderHome(){
  const u=current(),p=profile();if(!u)return;
  $("appUser").textContent=u.email;$("welcome").textContent="Welcome, "+(u.name||"Student").split(" ")[0]+" 👋";
@@ -844,7 +844,7 @@ function testConfig(){
  const b=testBlueprints[key||"OTHER"];
  return Object.assign({},b,{label:b.name});
 }
-let testTimerInterval=null,testTimerDeadline=0,testSubmitted=false;
+let testTimerInterval=null,testTimerDeadline=0,testSubmitted=false,activeTestQuestions=[];
 function buildTestOptions(correct){
  const base=["0","1","2","3","4","5","6","8","10","12","20","25","50","100","1/2","3/4","4/5","45°","negative","positive","zero","Equal real roots","Second law","kg","m/s","m/s²","Not sure"];
  const opts=[String(correct)],pool=base.filter(x=>x!==String(correct));
@@ -907,6 +907,7 @@ function startTestTimer(seconds){
 }
 function openProgressTest(){
  const day=cycleDay(),cfg=testConfig(),qs=testQuestions(),subject=cfg.type==="BOARD"?boardTestSubject():null;
+ activeTestQuestions=qs.map(q=>Object.assign({},q,{options:[...(q.options||[])]}));
  const pattern=cfg.sections.map(x=>x.name+(x.questions?": "+x.questions+" Q":"")).join(" • ");
  const markText=cfg.correct!=null?("Correct +"+cfg.correct+" / Wrong "+cfg.wrong):"Exam-specific marking";
  const practiceMinutes=Math.max(5,Math.min(cfg.duration||60,Math.max(5,Math.ceil(qs.length*2))));
@@ -923,7 +924,8 @@ function openProgressTest(){
 function submitProgressTest(autoSubmit){
  if(testSubmitted)return;
  testSubmitted=true;stopTestTimer();
- const qs=testQuestions(),day=cycleDay(),cfg=testConfig();let marks=0,maxShown=0,mistakes=[];
+ const qs=activeTestQuestions.slice(),day=cycleDay(),cfg=testConfig();let marks=0,maxShown=0,mistakes=[];
+ if(!qs.length){testSubmitted=false;toast("No test questions are available yet.");return;}
  qs.forEach((x,i)=>{
   const el=document.querySelector('input[name="test_'+i+'"]:checked');maxShown+=Number(x.marks)||1;
   if(el&&el.value===x.correct)marks+=Number(x.marks)||1;
