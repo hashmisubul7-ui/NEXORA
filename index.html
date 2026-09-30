@@ -646,7 +646,7 @@ function renderHomeProgress(p){
   </div>'+
   (subs.length?'<div style="margin-top:14px"><b class="small">Subject progress</b>'+subjectHtml+'</div>':'')+
   '<div class="notice" style="margin-top:14px">'+
-    (last?'Last test: Day '+last.day+' • '+last.score+'/'+last.total+' ('+Math.round(last.score/Math.max(1,last.total)*100)+'%)'+
+    (last?'Last test: Day '+last.day+(last.subject?' • '+last.subject:'')+' • '+last.score+'/'+(last.maxMarks||last.total)+' ('+(last.percentage??Math.round(last.score/Math.max(1,last.maxMarks||last.total)*100))+'%)'+
       (mistakes.length?' • '+mistakes.length+' mistake(s) available for revision.':' • No mistakes recorded in the latest result.')
       :'No progress test taken yet. Tests unlock on Days 7, 14 and 21.')+
   '</div>'+
@@ -802,6 +802,14 @@ function generateQuestions(){
  updateUserData(d=>{d.questions=qs;return d});
 }
 
+function isProgressTestDay(day){
+ const cfg=testConfig(),d=Number(day)||cycleDay();
+ return cfg.type==="BOARD" ? d>=7 && d<7+Math.max(1,Math.min(6,subjects().length)) : [7,14,21].includes(d);
+}
+function progressTestSubject(day){
+ const cfg=testConfig();
+ return cfg.type==="BOARD" ? subjects()[Math.max(0,(Number(day)-7))%Math.max(1,subjects().length)] : null;
+}
 function testConfig(){
  const p=profile()||{}, exam=String(p.exam||p.examKey||"").toLowerCase();
  const competitive=p.goalKey==="competitive";
