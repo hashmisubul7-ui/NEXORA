@@ -855,17 +855,43 @@ function buildTestOptions(correct){
 function testQuestions(){
  const cfg=testConfig(),target=cfg.type==="BOARD"?boardTestSubject():null,all=allTasks(),tasks=target?all.filter(t=>String(t.subject).toLowerCase()===String(target).toLowerCase()):all;
  const seen=new Set(),qs=[];
- const add=(q,a,section)=>{if(!q||seen.has(q))return;seen.add(q);qs.push({q,correct:String(a),options:buildTestOptions(a),type:"MCQ",marks:Number(cfg.correct)||1,negative:Number(cfg.wrong)||0,section:section||"General"})};
+ const add=(q,a,section,marks,negative)=>{
+   if(!q||seen.has(q))return;seen.add(q);
+   qs.push({q,correct:String(a),options:buildTestOptions(a),type:"MCQ",marks:Number(marks??cfg.correct??1)||1,negative:Number(negative??cfg.wrong??0)||0,section:section||"General"});
+ };
  tasks.forEach(t=>(t.lesson.practice||[]).forEach(q=>add(q[0],q[1],t.subject)));
- if(cfg.type==="BOARD"&&qs.length<4){
-   const k=knowledgeBank[boardTestSubject()]||knowledgeBank.Mathematics||{};
+ if(cfg.type==="BOARD"){
+   const k=knowledgeBank[boardTestSubject()]||{};
    Object.keys(k).forEach(topic=>(k[topic].practice||[]).forEach(q=>add(q[0],q[1],boardTestSubject())));
  }
+ // More original practice questions for the current built-in topics.
+ const extra={
+  Physics:[
+   ["If a body travels equal distances with speeds 20 m/s and 30 m/s, what is its average speed?","24 m/s"],
+   ["A force of 15 N acts on a 3 kg body. Find acceleration.","5 m/s²"],
+   ["If velocity changes from 10 m/s to 25 m/s in 3 s, find acceleration.","5 m/s²"],
+   ["What is the SI unit of force?","N"]
+  ],
+  Chemistry:[
+   ["How many moles are present in 18 g of water?","1 mol"],
+   ["An atom has 17 protons. What is its atomic number?","17"],
+   ["What is the molar mass of CO₂ approximately?","44 g/mol"],
+   ["A neutral atom has 8 protons. How many electrons does it have?","8"]
+  ],
+  Mathematics:[
+   ["Solve x²−9x+20=0.","4, 5"],
+   ["What is the discriminant of x²−4x+4=0?","0"],
+   ["If sin θ=3/5 for an acute angle, what is cos θ?","4/5"],
+   ["If tan θ=1 and θ is acute, find θ.","45°"]
+  ]
+ };
+ const selected=target?[target]:Object.keys(extra);
+ selected.forEach(sub=>(extra[sub]||[]).forEach(q=>add(q[0],q[1],sub)));
  if(qs.length<5){
    add("What should you do when you make a repeated mistake?","Review the concept and practise the weak point","General");
    add("What does a completed study session record in NEXORA?","The session and its completion status","General");
  }
- return qs.slice(0,Math.min(20,qs.length));
+ return qs.slice(0,Math.min(30,qs.length));
 }
 function stopTestTimer(){
  if(testTimerInterval){clearInterval(testTimerInterval);testTimerInterval=null}
