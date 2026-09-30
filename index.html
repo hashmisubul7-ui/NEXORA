@@ -1006,6 +1006,12 @@ function testQuestions(){
    (extra[sub]||[]).forEach(q=>{
      if(normTopic(q[2])===activeTopic)add(q[0],q[1],sub,null,null,q[2]);
    });
+   const bank=questionBankByTopic[sub]||{};
+   Object.keys(bank).forEach(topic=>{
+     if(normTopic(topic)===activeTopic){
+       bank[topic].forEach(q=>add(q[0],q[1],sub,null,null,topic));
+     }
+   });
  });
  // Never pad a topic test with unrelated questions. If the current topic has
  // fewer questions than the real exam pattern, show only the verified NEXORA
