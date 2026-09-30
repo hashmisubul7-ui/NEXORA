@@ -147,6 +147,13 @@ label.field>span{display:block;margin:0 0 7px}
  <div class="welcome card"><div><div class="kicker">YOUR STUDY SPACE</div><h2 id="welcome">Welcome 👋</h2><div id="studentLine" class="muted"></div></div><div class="welcome-actions"><button class="btn" onclick="go('profile')">👤 Profile</button><button class="btn" onclick="openStudent()">Edit plan</button></div></div>
  <div class="goal card"><div class="eyebrow">ACTIVE GOAL</div><h2 id="homeGoal">Set your first goal</h2><div id="homeGoalMeta" class="goal-meta"></div><button class="btn primary" onclick="go('today')">View Today's Tasks</button> <button class="btn" onclick="go('roadmap')">View Roadmap</button></div>
  <div class="stats"><div class="stat card"><b id="statProgress">0%</b><span>21-day progress</span></div><div class="stat card"><b id="statDone">0</b><span>tasks done</span></div><div class="stat card"><b id="statFocus">Balanced</b><span>focus</span></div></div>
+ <div class="card section-card" style="margin-bottom:18px">
+  <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap">
+   <div><h3 style="margin:0">📊 Your Progress</h3><p class="muted small" style="margin:5px 0 0">Real study sessions, tests and mistakes — not just calendar days.</p></div>
+   <span id="progressPhase" class="small" style="font-weight:900;color:var(--accent)"></span>
+  </div>
+  <div id="homeProgressSummary" style="margin-top:14px"></div>
+ </div>
  <div class="quick card"><h3>Quick access</h3><div class="quick-grid"><button class="btn" onclick="go('today')">✅ Today</button><button class="btn" onclick="go('timetable')">📅 Timetable</button><button class="btn" onclick="go('study')">🧠 Study</button><button class="btn" onclick="go('profile')">👤 Profile</button></div></div>
 </section>
 
@@ -613,9 +620,38 @@ function renderHome(){
  if(!p){$("studentLine").textContent="Create your student profile to generate your plan.";$("homeGoal").textContent="Set your first study goal";$("homeGoalMeta").textContent="Your timetable, roadmap and tasks will appear here.";$("statProgress").textContent="0%";$("statDone").textContent="0";$("statFocus").textContent="Balanced";return}
  $("studentLine").textContent=[p.className,p.board,p.stream].filter(Boolean).join(" • ");
  $("homeGoal").textContent=p.goalText;$("homeGoalMeta").textContent=[p.className,p.stream,p.exam].filter(Boolean).join(" • ");
- $("statProgress").textContent=progress()+"%";$("statDone").textContent=doneCount();$("statFocus").textContent=(userData().focusSessions||[]).length?((userData().focusSessions||[]).reduce((a,x)=>a+(x.minutes||0),0)+" min focused"):(p.weak||"Balanced").split(",")[0].trim()||"Balanced";
+ $("statProgress").textContent=progress()+"%";$("statDone").textContent=doneCount();$("statFocus").textContent=(userData().focusSessions||[]).length?((userData().focusSessions||[]).reduce((a,x)=>a+(x.minutes||0),0)+" min focused"):(p.weak||"Balanced").split(",")[0].trim()||"Balanced";renderHomeProgress(p);
 }
 
+function renderHomeProgress(p){
+ const d=userData(),done=d.tasks||{},subs=subjects(),day=cycleDay(),tests=d.tests||[],mistakes=d.mistakes||[],focus=d.focusSessions||[];
+ const completed=completedSessionCount();
+ const expected=Math.max(1,subs.length*day);
+ const testCount=tests.length;
+ const last=tests[0];
+ $("progressPhase").textContent="Day "+day+"/21 • "+phase();
+ const subjectHtml=subs.map((s,i)=>{
+   const total=day;
+   const finished=Object.keys(done).filter(k=>/^d\\d+_\\d+$/.test(k)&&k.endsWith("_"+i)&&done[k]).length;
+   const pct=Math.min(100,Math.round(finished/Math.max(1,total)*100));
+   return '<div style="margin-top:10px"><div style="display:flex;justify-content:space-between;gap:8px;font-size:13px"><b>'+esc(s)+'</b><span class="muted">'+Math.min(finished,total)+'/'+total+'</span></div><div class="progressbar" style="margin-top:5px"><i style="width:'+pct+'%"></i></div></div>';
+ }).join('');
+ const focusMin=focus.reduce((a,x)=>a+Number(x.minutes||0),0);
+ $("homeProgressSummary").innerHTML=
+  '<div class="stats" style="margin:0;grid-template-columns:repeat(4,1fr)">\
+   <div class="stat" style="padding:14px"><b style="font-size:22px">'+completed+'</b><span>sessions</span></div>\
+   <div class="stat" style="padding:14px"><b style="font-size:22px">'+testCount+'</b><span>tests</span></div>\
+   <div class="stat" style="padding:14px"><b style="font-size:22px">'+mistakes.length+'</b><span>mistakes</span></div>\
+   <div class="stat" style="padding:14px"><b style="font-size:22px">'+focusMin+'m</b><span>focus time</span></div>\
+  </div>'+
+  (subs.length?'<div style="margin-top:14px"><b class="small">Subject progress</b>'+subjectHtml+'</div>':'')+
+  '<div class="notice" style="margin-top:14px">'+
+    (last?'Last test: Day '+last.day+' • '+last.score+'/'+last.total+' ('+Math.round(last.score/Math.max(1,last.total)*100)+'%)'+
+      (mistakes.length?' • '+mistakes.length+' mistake(s) available for revision.':' • No mistakes recorded in the latest result.')
+      :'No progress test taken yet. Tests unlock on Days 7, 14 and 21.')+
+  '</div>'+
+  (mistakes.length?'<div><b class="small">Recent mistakes</b>'+mistakes.slice(0,3).map(m=>'<div class="profile-row"><span>'+esc(m.question)+'</span><b>Review</b></div>').join('')+'</div>':'');
+}
 function renderToday(){
  const box=$("todayTasks"), p=profile();
  const d=userData(),done=d.tasks||{},tasks=allTasks(),day=cycleDay();
