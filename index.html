@@ -818,7 +818,7 @@ function testConfig(){
  if(!competitive)return {type:"BOARD",max:100,label:"Board Progress Test"};
  return {type:"OTHER",max:100,label:"Progress Test"};
 }
-function progressTestSubject(cycleDay()){return progressTestSubject(cycleDay());}
+function boardTestSubject(){return progressTestSubject(cycleDay());}
 function testQuestions(){
  const cfg=testConfig(),all=allTasks(),target=cfg.type==="BOARD"?progressTestSubject(cycleDay()):null;
  const tasks=target?all.filter(t=>String(t.subject).toLowerCase()===String(target).toLowerCase()):all;
