@@ -663,7 +663,9 @@ function renderToday(){
     </div>`).join("");
  }
  if(isProgressTestDay(day)){
-   box.innerHTML+=`<div class="task"><button class="task-open" onclick="openProgressTest()"><span class="task-title">📝 Day ${day} Progress Test</span><div class="muted small">Take the test to complete today's assessment and record mistakes.</div></button></div>`;
+   box.innerHTML+=`<div class="task"><button class="task-open" onclick="openProgressTest()"><span class="task-title">📝 Day ${day} Progress Test</span><div class="muted small">${testConfig().type==="BOARD"?("Today's "+esc(progressTestSubject(day)||"Board")+" paper"):("Take the "+esc(testConfig().label))} — record your score and mistakes.</div></button></div>`;
+ }else if(testConfig().type==="BOARD" && userData().boardNextPaperStatus==="later" && Number(userData().boardNextPaperIndex||0)<Math.min(6,subjects().length)){
+   box.innerHTML+=`<div class="task"><button class="task-open" onclick="openProgressTest()"><span class="task-title">📝 Next Board Paper</span><div class="muted small">You postponed the next paper. Take it whenever you're ready.</div></button></div>`;
  }
  const completedToday=tasks.filter(t=>done[t.id]).length;
  $("todayProgress").style.width=Math.round(completedToday/Math.max(1,tasks.length)*100)+"%";
@@ -803,8 +805,11 @@ function generateQuestions(){
 }
 
 function isProgressTestDay(day){
- const cfg=testConfig(),d=Number(day)||cycleDay();
- return cfg.type==="BOARD" ? d>=7 && d<7+Math.max(1,Math.min(6,subjects().length)) : [7,14,21].includes(d);
+ const cfg=testConfig(),d=Number(day)||cycleDay(),u=userData();
+ if(cfg.type!=="BOARD")return [7,14,21].includes(d);
+ if(d===7)return true;
+ const status=u.boardNextPaperStatus;
+ return d>7 && (status==="today"||status==="tomorrow");
 }
 function progressTestSubject(day){
  const cfg=testConfig();
@@ -878,7 +883,7 @@ function submitProgressTest(){
  if(cfg.type==="BOARD" && boardNext && boardNext<Math.min(6,subjects().length)){
    updateUserData(d=>{d.boardNextPaperIndex=boardNext;d.boardNextPaperStatus="choice";return d});
  }
- $("testResult").innerHTML=`<div class="lesson-block"><h3>Score: ${marks}/${cfg.max} (${pct}%)</h3><p>${subject?esc(subject)+" • ":""}${mistakes.length?mistakes.length+" mistake(s) saved for revision.":"No mistakes recorded."}</p>${mistakes.map(m=>`<div class="muted small" style="margin-top:7px">• ${esc(m.question)}<br>Correct: ${esc(m.correct)} • Your answer: ${esc(m.chosen)}</div>`).join("")}</div><button class="btn primary" style="margin-top:10px" onclick="closeStudySession();renderAll()">Continue</button>`;
+ $("testResult").innerHTML=`<div class="lesson-block"><h3>Score: ${marks}/${cfg.max} (${pct}%)</h3><p>${subject?esc(subject)+" • ":""}${mistakes.length?mistakes.length+" mistake(s) saved for revision.":"No mistakes recorded."}</p>${mistakes.map(m=>`<div class="muted small" style="margin-top:7px">• ${esc(m.question)}<br>Correct: ${esc(m.correct)} • Your answer: ${esc(m.chosen)}</div>`).join("")}</div>${cfg.type==="BOARD" && boardNext && boardNext<Math.min(6,subjects().length)?`<div class="lesson-block" style="margin-top:10px"><b>Next board paper</b><p class="muted small">Choose when you want to take the next subject paper.</p><button class="btn primary" style="margin-top:8px" onclick="showBoardNextPaperChoice()">Choose: Today / Tomorrow / Later</button></div>`:""}<button class="btn" style="margin-top:10px" onclick="closeStudySession();renderAll()">Continue</button>`;
  renderHome();
 }
 
