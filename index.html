@@ -883,7 +883,9 @@ function submitProgressTest(){
  if(cfg.type==="BOARD" && boardNext && boardNext<Math.min(6,subjects().length)){
    updateUserData(d=>{d.boardNextPaperIndex=boardNext;d.boardNextPaperStatus="choice";return d});
  }
- $("testResult").innerHTML=`<div class="lesson-block"><h3>Score: ${marks}/${cfg.max} (${pct}%)</h3><p>${subject?esc(subject)+" • ":""}${mistakes.length?mistakes.length+" mistake(s) saved for revision.":"No mistakes recorded."}</p>${mistakes.map(m=>`<div class="muted small" style="margin-top:7px">• ${esc(m.question)}<br>Correct: ${esc(m.correct)} • Your answer: ${esc(m.chosen)}</div>`).join("")}</div>${cfg.type==="BOARD" && boardNext && boardNext<Math.min(6,subjects().length)?`<div class="lesson-block" style="margin-top:10px"><b>Next board paper</b><p class="muted small">Choose when you want to take the next subject paper.</p><button class="btn primary" style="margin-top:8px" onclick="showBoardNextPaperChoice()">Choose: Today / Tomorrow / Later</button></div>`:""}<button class="btn" style="margin-top:10px" onclick="closeStudySession();renderAll()">Continue</button>`;
+ const nextBoardChoice=(cfg.type==="BOARD" && boardNext && boardNext<Math.min(6,subjects().length))?
+   '<div class="lesson-block" style="margin-top:10px"><b>Next board paper</b><p class="muted small">Choose when you want to take the next subject paper.</p><button class="btn primary" style="margin-top:8px" onclick="showBoardNextPaperChoice()">Choose: Today / Tomorrow / Later</button></div>':"";
+ $("testResult").innerHTML=`<div class="lesson-block"><h3>Score: ${marks}/${cfg.max} (${pct}%)</h3><p>${subject?esc(subject)+" • ":""}${mistakes.length?mistakes.length+" mistake(s) saved for revision.":"No mistakes recorded."}</p>${mistakes.map(m=>`<div class="muted small" style="margin-top:7px">• ${esc(m.question)}<br>Correct: ${esc(m.correct)} • Your answer: ${esc(m.chosen)}</div>`).join("")}</div>${nextBoardChoice}<button class="btn" style="margin-top:10px" onclick="closeStudySession();renderAll()">Continue</button>`;
  renderHome();
 }
 
