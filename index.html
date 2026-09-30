@@ -874,44 +874,64 @@ function buildTestOptions(correct,question){
  return [...new Set([c,...base.filter(x=>x!==c)])].slice(0,4);
 }
 function testQuestions(){
- const cfg=testConfig(),target=cfg.type==="BOARD"?boardTestSubject():null,all=allTasks(),tasks=target?all.filter(t=>String(t.subject).toLowerCase()===String(target).toLowerCase()):all;
- const seen=new Set(),qs=[];
- const add=(q,a,section,marks,negative)=>{
+ const cfg=testConfig(),day=cycleDay(),target=cfg.type==="BOARD"?boardTestSubject():null,all=allTasks();
+ const selectedTasks=target?all.filter(t=>String(t.subject).toLowerCase()===String(target).toLowerCase()):all;
+ const seen=new Set(),qs=[],topicFor=(subject)=>roadmapTopicFor(subject,day);
+ const normTopic=s=>String(s||"").toLowerCase().replace(/[^a-z0-9]+/g," ").trim();
+ const add=(q,a,section,marks,negative,topic)=>{
    if(!q||seen.has(q))return;seen.add(q);
-   qs.push({q,correct:String(a),options:buildTestOptions(a,q),type:"MCQ",marks:Number(marks??cfg.correct??1)||1,negative:Number(negative??cfg.wrong??0)||0,section:section||"General"});
+   qs.push({q,correct:String(a),options:buildTestOptions(a,q),type:"MCQ",marks:Number(marks??cfg.correct??1)||1,negative:Number(negative??cfg.wrong??0)||0,section:section||"General",topic:topic||topicFor(section)});
  };
- tasks.forEach(t=>(t.lesson.practice||[]).forEach(q=>add(q[0],q[1],t.subject)));
- if(cfg.type==="BOARD"){
-   const k=knowledgeBank[boardTestSubject()]||{};
-   Object.keys(k).forEach(topic=>(k[topic].practice||[]).forEach(q=>add(q[0],q[1],boardTestSubject())));
- }
- // More original practice questions for the current built-in topics.
+ // 1) First priority: the exact topic assigned by today's roadmap.
+ selectedTasks.forEach(t=>{
+   const topic=topicFor(t.subject);
+   (t.lesson.practice||[]).forEach(q=>add(q[0],q[1],t.subject,null,null,topic));
+ });
+ // 2) Second priority: recent mistakes from the same subject/topic.
+ const mistakes=(userData().mistakes||[]).slice(0,30);
+ mistakes.forEach(m=>{
+   const subject=String(m.subject||"").trim();
+   const topic=String(m.topic||"").trim();
+   if(!subject||!topic)return;
+   if(target&&subject.toLowerCase()!==String(target).toLowerCase())return;
+   const activeSubject=selectedTasks.some(t=>t.subject.toLowerCase()===subject.toLowerCase());
+   if(!activeSubject)return;
+   const activeTopic=normTopic(topicFor(subject));
+   if(normTopic(topic)===activeTopic){
+     add(m.question,m.correct,subject,m.marks,m.negative,topic);
+   }
+ });
+ // 3) Extra original NEXORA questions are explicitly tagged by topic.
  const extra={
   Physics:[
-   ["If a body travels equal distances with speeds 20 m/s and 30 m/s, what is its average speed?","24 m/s"],
-   ["A force of 15 N acts on a 3 kg body. Find acceleration.","5 m/s²"],
-   ["If velocity changes from 10 m/s to 25 m/s in 3 s, find acceleration.","5 m/s²"],
-   ["What is the SI unit of force?","N"]
+   ["If a body travels equal distances with speeds 20 m/s and 30 m/s, what is its average speed?","24 m/s","Kinematics"],
+   ["A force of 15 N acts on a 3 kg body. Find acceleration.","5 m/s²","Newton's Laws"],
+   ["If velocity changes from 10 m/s to 25 m/s in 3 s, find acceleration.","5 m/s²","Kinematics"],
+   ["What is the SI unit of force?","N","Newton's Laws"]
   ],
   Chemistry:[
-   ["How many moles are present in 18 g of water?","1 mol"],
-   ["An atom has 17 protons. What is its atomic number?","17"],
-   ["What is the molar mass of CO₂ approximately?","44 g/mol"],
-   ["A neutral atom has 8 protons. How many electrons does it have?","8"]
+   ["How many moles are present in 18 g of water?","1 mol","Some Basic Concepts of Chemistry"],
+   ["An atom has 17 protons. What is its atomic number?","17","Atomic Structure"],
+   ["What is the molar mass of CO₂ approximately?","44 g/mol","Some Basic Concepts of Chemistry"],
+   ["A neutral atom has 8 protons. How many electrons does it have?","8","Atomic Structure"]
   ],
   Mathematics:[
-   ["Solve x²−9x+20=0.","4, 5"],
-   ["What is the discriminant of x²−4x+4=0?","0"],
-   ["If sin θ=3/5 for an acute angle, what is cos θ?","4/5"],
-   ["If tan θ=1 and θ is acute, find θ.","45°"]
+   ["Solve x²−9x+20=0.","4, 5","Quadratic Equations"],
+   ["What is the discriminant of x²−4x+4=0?","0","Quadratic Equations"],
+   ["If sin θ=3/5 for an acute angle, what is cos θ?","4/5","Trigonometry"],
+   ["If tan θ=1 and θ is acute, find θ.","45°","Trigonometry"]
   ]
  };
- const selected=target?[target]:Object.keys(extra);
- selected.forEach(sub=>(extra[sub]||[]).forEach(q=>add(q[0],q[1],sub)));
- if(qs.length<5){
-   add("What should you do when you make a repeated mistake?","Review the concept and practise the weak point","General");
-   add("What does a completed study session record in NEXORA?","The session and its completion status","General");
- }
+ const selectedSubjects=target?[target]:selectedTasks.map(t=>t.subject);
+ selectedSubjects.forEach(sub=>{
+   const activeTopic=normTopic(topicFor(sub));
+   (extra[sub]||[]).forEach(q=>{
+     if(normTopic(q[2])===activeTopic)add(q[0],q[1],sub,null,null,q[2]);
+   });
+ });
+ // Never pad a topic test with unrelated questions. If the current topic has
+ // fewer questions than the real exam pattern, show only the verified NEXORA
+ // questions currently available and label the test as a practice set.
  return qs.slice(0,Math.min(30,qs.length));
 }
 function stopTestTimer(){
