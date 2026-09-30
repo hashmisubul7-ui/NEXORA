@@ -835,7 +835,6 @@ function testConfig(){
  return Object.assign({},b,{label:b.name});
 }
 function boardTestSubject(){return progressTestSubject(cycleDay());}
-function boardTestSubject(){return progressTestSubject(cycleDay());}
 function testQuestions(){
  const cfg=testConfig(),all=allTasks(),target=cfg.type==="BOARD"?progressTestSubject(cycleDay()):null;
  const tasks=target?all.filter(t=>String(t.subject).toLowerCase()===String(target).toLowerCase()):all;
@@ -887,7 +886,7 @@ function submitProgressTest(){
  $("testResult").innerHTML='<div class="lesson-block"><h3>Score: '+scaled+'/'+(cfg.max||maxShown)+' ('+pct+'%)</h3><p>'+(subject?esc(subject)+" • ":"")+'Raw simulation marks: '+marks+'/'+maxShown+'. '+(mistakes.length?mistakes.length+" mistake(s) saved for revision.":"No mistakes recorded.")+'</p>'+mistakes.map(m=>'<div class="muted small" style="margin-top:7px">• '+esc(m.question)+'<br>Correct: '+esc(m.correct)+' • Your answer: '+esc(m.chosen)+' • Marking: +'+m.marks+' / '+m.negative+'</div>').join("")+'</div>'+nextBoardChoice+'<button class="btn" style="margin-top:10px" onclick="closeStudySession();renderAll()">Continue</button>';
  renderHome();
 }
-function chooseBoardNextPaper(function chooseBoardNextPaper(choice){
+function chooseBoardNextPaper(choice){
  const d=userData(),idx=Number(d.boardNextPaperIndex)||1;
  updateUserData(x=>{
    x.boardNextPaperIndex=idx;
