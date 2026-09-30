@@ -802,8 +802,22 @@ function generateQuestions(){
  updateUserData(d=>{d.questions=qs;return d});
 }
 
+function testConfig(){
+ const p=profile()||{}, exam=String(p.exam||p.examKey||"").toLowerCase();
+ const competitive=p.goalKey==="competitive";
+ if(competitive&&exam.includes("jee"))return {type:"JEE",max:300,label:"JEE-style Progress Test"};
+ if(competitive&&exam.includes("neet"))return {type:"NEET",max:720,label:"NEET-style Progress Test"};
+ if(!competitive)return {type:"BOARD",max:100,label:"Board Progress Test"};
+ return {type:"OTHER",max:100,label:"Progress Test"};
+}
+function boardTestSubject(){
+ const subs=subjects(),d=cycleDay(),testIndex=Math.floor((d-1)/7);
+ return subs.length?subs[testIndex%subs.length]:null;
+}
 function testQuestions(){
- const p=profile()||{},tasks=allTasks(),seen=new Set(),qs=[];
+ const cfg=testConfig(),all=allTasks(),target=cfg.type==="BOARD"?boardTestSubject():null;
+ const tasks=target?all.filter(t=>String(t.subject).toLowerCase()===String(target).toLowerCase()):all;
+ const seen=new Set(),qs=[];
  tasks.forEach(t=>{
    (t.lesson.practice||[]).forEach(q=>{
      const key=q[0];if(seen.has(key))return;seen.add(key);
@@ -824,33 +838,32 @@ function testQuestions(){
  return qs.slice(0,5);
 }
 function openProgressTest(){
- const day=cycleDay(),qs=testQuestions();
- $("sessionTitle").textContent=`Day ${day} Progress Test`;
- $("sessionMeta").textContent=`${qs.length} questions • Submit to record your score and mistakes`;
- $("sessionBody").innerHTML=`<div class="notice">This is an original NEXORA practice test. The test is built from the lessons currently assigned to you; it is not claimed to be a verified PYQ.</div>`+
- qs.map((x,i)=>`<div class="practice-q"><b>${i+1}. ${esc(x[0])}</b>${x[2].map(o=>`<label class="test-option"><input type="radio" name="test_${i}" value="${esc(o)}">${esc(o)}</label>`).join("")}</div>`).join("")+
- `<div class="session-actions"><button class="btn primary" onclick="submitProgressTest()">Submit test</button></div><div id="testResult"></div>`;
+ const day=cycleDay(),cfg=testConfig(),qs=testQuestions(),subject=cfg.type==="BOARD"?boardTestSubject():null;
+ $("sessionTitle").textContent=subject?\`Day \${day} • \${subject} Board Test\`:\`Day \${day} • \${cfg.label}\`;
+ $("sessionMeta").textContent=\`\${qs.length} questions • Score scale: \${cfg.max} marks • One test at a time\`;
+ $("sessionBody").innerHTML=\`<div class="notice">\${subject?\`Today’s paper is <b>\${esc(subject)}</b>. Board subjects are tested separately, not all together.\`:\`This progress test uses a \${cfg.max}-mark NEXORA scoring scale. It is an original practice test, not a verified official paper.\`}</div>\`+
+ qs.map((x,i)=>\`<div class="practice-q"><b>\${i+1}. \${esc(x[0])}</b>\${x[2].map(o=>\`<label class="test-option"><input type="radio" name="test_\${i}" value="\${esc(o)}">\${esc(o)}</label>\`).join("")}</div>\`).join("")+
+ \`<div class="session-actions"><button class="btn primary" onclick="submitProgressTest()">Submit test</button></div><div id="testResult"></div>\`;
  $("studySessionModal").classList.add("open");
 }
 function submitProgressTest(){
- const qs=testQuestions(),day=cycleDay();let score=0,mistakes=[];
- qs.forEach((x,i)=>{const el=document.querySelector(`input[name="test_${i}"]:checked`);if(el&&el.value===x[1])score++;else mistakes.push({question:x[0],correct:x[1],chosen:el?el.value:"Not answered"});});
+ const qs=testQuestions(),day=cycleDay(),cfg=testConfig();let correctCount=0,mistakes=[];
+ qs.forEach((x,i)=>{const el=document.querySelector(\`input[name="test_\${i}"]:checked\`);if(el&&el.value===x[1])correctCount++;else mistakes.push({question:x[0],correct:x[1],chosen:el?el.value:"Not answered"});});
+ const pct=Math.round(correctCount/Math.max(1,qs.length)*100),marks=Math.round(cfg.max*pct/100),subject=cfg.type==="BOARD"?boardTestSubject():null;
  updateUserData(d=>{
    d.tests=d.tests||[];
-   d.tests.unshift({day,score,total:qs.length,mistakes,date:new Date().toISOString()});
+   d.tests.unshift({day,subject,examType:cfg.type,score:marks,maxMarks:cfg.max,rawScore:correctCount,totalQuestions:qs.length,percentage:pct,mistakes,date:new Date().toISOString()});
    d.mistakes=d.mistakes||[];
-   mistakes.forEach(m=>d.mistakes.unshift(Object.assign({day,date:new Date().toISOString()},m)));
-   d.testDays=d.testDays||{};
-   d.testDays[day]=true;
-   d.lastTest={day,score,total:qs.length};
+   mistakes.forEach(m=>d.mistakes.unshift(Object.assign({day,subject,date:new Date().toISOString()},m)));
+   d.testDays=d.testDays||{};d.testDays[day]=true;
+   d.lastTest={day,subject,examType:cfg.type,score:marks,maxMarks:cfg.max,rawScore:correctCount,totalQuestions:qs.length,percentage:pct};
    return d
  });
- const pct=Math.round(score/Math.max(1,qs.length)*100);
  if(pct<60)toast("Test saved. Weak areas will be prioritised in upcoming sessions.");
  else if(pct<80)toast("Test saved. Keep reviewing the missed questions.");
- else toast("Test saved. Strong result — continue with the next day.");
- advanceStudyDay('test-complete');
- $("testResult").innerHTML=`<div class="lesson-block"><h3>Score: ${score}/${qs.length} (${pct}%)</h3><p>${mistakes.length?mistakes.length+" mistake(s) saved for revision.":"No mistakes recorded."}</p>${mistakes.map(m=>`<div class="muted small" style="margin-top:7px">• ${esc(m.question)}<br>Correct: ${esc(m.correct)} • Your answer: ${esc(m.chosen)}</div>`).join("")}</div><button class="btn primary" style="margin-top:10px" onclick="closeStudySession();renderAll()">Continue</button>`;
+ else toast("Test saved. Continue with the next day.");
+ advanceStudyDay("test-complete");
+ $("testResult").innerHTML=\`<div class="lesson-block"><h3>Score: \${marks}/\${cfg.max} (\${pct}%)</h3><p>\${subject?esc(subject)+" • ":""}\${mistakes.length?mistakes.length+" mistake(s) saved for revision.":"No mistakes recorded."}</p>\${mistakes.map(m=>\`<div class="muted small" style="margin-top:7px">• \${esc(m.question)}<br>Correct: \${esc(m.correct)} • Your answer: \${esc(m.chosen)}</div>\`).join("")}</div><button class="btn primary" style="margin-top:10px" onclick="closeStudySession();renderAll()">Continue</button>\`;
  renderHome();
 }
 
