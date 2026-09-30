@@ -815,81 +815,79 @@ function progressTestSubject(day){
  const cfg=testConfig();
  return cfg.type==="BOARD" ? subjects()[Math.max(0,(Number(day)-7))%Math.max(1,subjects().length)] : null;
 }
+const testBlueprints={
+ JEE:{name:"JEE Main Paper 1 (B.E./B.Tech)",type:"JEE",year:"2026",max:300,duration:180,totalQuestions:75,sections:[{name:"Mathematics",questions:25,marks:100,mcq:20,numerical:5},{name:"Physics",questions:25,marks:100,mcq:20,numerical:5},{name:"Chemistry",questions:25,marks:100,mcq:20,numerical:5}],types:"MCQ + Numerical",correct:4,wrong:-1,unattempted:0},
+ "JEE ADVANCED":{name:"JEE Advanced",type:"JEE_ADVANCED",year:"2026",max:null,duration:360,totalQuestions:null,sections:[{name:"Paper 1",questions:null},{name:"Paper 2",questions:null}],types:"Multiple-choice / numerical formats vary by paper",correct:null,wrong:null,unattempted:0,note:"JEE Advanced changes question format and marking across papers/sections; NEXORA must load the verified paper-specific scheme before calling a simulation official."},
+ NEET:{name:"NEET (UG)",type:"NEET",year:"2026",max:720,duration:200,totalQuestions:180,sections:[{name:"Physics",questions:45,marks:180},{name:"Chemistry",questions:45,marks:180},{name:"Botany",questions:45,marks:180},{name:"Zoology",questions:45,marks:180}],types:"MCQ",correct:4,wrong:-1,unattempted:0},
+ NDA:{name:"NDA/NA Written Examination",type:"NDA",year:"2026",max:900,duration:300,totalQuestions:270,sections:[{name:"Mathematics",questions:120,marks:300,correct:2.5,wrong:-5/6},{name:"GAT",questions:150,marks:600,correct:4,wrong:-4/3}],types:"MCQ",correct:null,wrong:null,unattempted:0,note:"Mathematics and GAT are separate papers of 150 minutes each."},
+ UPSC:{name:"UPSC Civil Services Preliminary",type:"UPSC",year:"2026",max:400,duration:240,totalQuestions:180,sections:[{name:"General Studies Paper I",questions:100,marks:200,correct:2,wrong:-2/3},{name:"CSAT Paper II",questions:80,marks:200,correct:2.5,wrong:-5/6}],types:"MCQ",correct:null,wrong:null,unattempted:0,note:"CSAT is qualifying; this NEXORA score is a practice raw-mark display."},
+ CUET:{name:"CUET (UG)",type:"CUET",year:"2026",max:250,duration:60,totalQuestions:50,sections:[{name:"Selected Test Paper",questions:50,marks:250}],types:"MCQ",correct:5,wrong:-1,unattempted:0,note:"Each selected test paper has its own 60-minute session."},
+ SSC:{name:"SSC CGL Tier-I",type:"SSC",year:"2026",max:200,duration:60,totalQuestions:100,sections:[{name:"General Intelligence & Reasoning",questions:25,marks:50},{name:"General Awareness",questions:25,marks:50},{name:"Quantitative Aptitude",questions:25,marks:50},{name:"English Comprehension",questions:25,marks:50}],types:"MCQ",correct:2,wrong:-0.5,unattempted:0},
+ CAT:{name:"CAT (latest published pattern)",type:"CAT",year:"2025-pattern",max:204,duration:120,totalQuestions:68,sections:[{name:"VARC",questions:24,marks:72,correct:3,wrong:-1,nonMcq:3},{name:"DILR",questions:22,marks:66,correct:3,wrong:-1,nonMcq:10},{name:"QA",questions:22,marks:66,correct:3,wrong:-1,nonMcq:8}],types:"MCQ + TITA",correct:3,wrong:-1,unattempted:0,note:"CAT pattern shown here is the latest published pattern available to NEXORA; do not label it as the official 2026 pattern until IIM publishes it."},
+ GATE:{name:"GATE",type:"GATE",year:"2026",max:100,duration:180,totalQuestions:65,sections:[{name:"General Aptitude",marks:15},{name:"Selected GATE Subject",marks:85}],types:"MCQ + MSQ + NAT",correct:null,wrong:null,unattempted:0,note:"1-mark MCQ: -1/3; 2-mark MCQ: -2/3; MSQ/NAT have no negative marking."},
+ OTHER:{name:"NEXORA Practice Test",type:"OTHER",year:"NEXORA",max:100,duration:60,totalQuestions:20,sections:[],types:"MCQ",correct:5,wrong:0,unattempted:0}
+};
 function testConfig(){
- const p=profile()||{}, exam=String(p.exam||p.examKey||"").toLowerCase();
- const competitive=p.goalKey==="competitive";
- if(!competitive)return {type:"BOARD",max:100,label:"Board Progress Test",schedule:"separate-subject"};
- if(exam.includes("jee"))return {type:"JEE",max:300,label:"JEE Progress Test"};
- if(exam.includes("neet"))return {type:"NEET",max:720,label:"NEET Progress Test"};
- if(exam.includes("nda"))return {type:"NDA",max:900,label:"NDA Progress Test"};
- if(exam.includes("upsc"))return {type:"UPSC",max:400,label:"UPSC Prelims-style Progress Test"};
- if(exam.includes("cuet"))return {type:"CUET",max:250,label:"CUET Subject Progress Test"};
- if(exam.includes("ssc"))return {type:"SSC",max:200,label:"SSC CGL Tier-I-style Progress Test"};
- if(exam.includes("cat"))return {type:"CAT",max:204,label:"CAT-style Progress Test"};
- if(exam.includes("gate"))return {type:"GATE",max:100,label:"GATE Progress Test"};
- return {type:"OTHER",max:100,label:"Progress Test"};
+ const p=profile()||{},exam=String(p.exam||p.examKey||"").toUpperCase();
+ if(p.goalKey!=="competitive")return Object.assign({type:"BOARD",max:100,label:"Board Subject Paper",schedule:"separate-subject"},{name:"Board Subject Practice Paper",year:"NEXORA",duration:180,totalQuestions:100,sections:[{name:progressTestSubject(cycleDay())||"Selected Subject",questions:100,marks:100}],types:"Board-style practice questions",correct:1,wrong:0,unattempted:0});
+ const key=Object.keys(testBlueprints).find(k=>exam.includes(k));
+ const b=testBlueprints[key||"OTHER"];
+ return Object.assign({},b,{label:b.name});
 }
+function boardTestSubject(){return progressTestSubject(cycleDay());}
 function boardTestSubject(){return progressTestSubject(cycleDay());}
 function testQuestions(){
  const cfg=testConfig(),all=allTasks(),target=cfg.type==="BOARD"?progressTestSubject(cycleDay()):null;
  const tasks=target?all.filter(t=>String(t.subject).toLowerCase()===String(target).toLowerCase()):all;
  const seen=new Set(),qs=[];
- tasks.forEach(t=>{
-   (t.lesson.practice||[]).forEach(q=>{
-     const key=q[0];if(seen.has(key))return;seen.add(key);
-     const correct=q[1],options=[correct];
-     const distractors=["0","1","2","3","4","5","6","10","12","20","25","50","100","None of these"].filter(x=>x!==correct);
-     while(options.length<4){const x=distractors[options.length-1];if(x&&!options.includes(x))options.push(x);else break}
-     while(options.length<4)options.push("Not sure");
-     qs.push([q[0],correct,options]);
-   });
- });
+ tasks.forEach(t=>
+  (t.lesson.practice||[]).forEach(q=>{
+   const key=q[0];if(seen.has(key))return;seen.add(key);
+   const correct=q[1],options=[correct],d=["0","1","2","3","4","5","6","10","12","20","25","50","100","None of these"].filter(x=>x!==correct);
+   while(options.length<4){const x=d[options.length-1];if(x&&!options.includes(x))options.push(x);else break}
+   while(options.length<4)options.push("Not sure");
+   qs.push({q:q[0],correct,options,type:"MCQ",marks:cfg.correct??1,negative:cfg.wrong??0,section:t.subject});
+  })
+ );
  if(qs.length<5){
-   const fallback=[
-    ["What should you do when you make a repeated mistake?","Review the concept and practise the weak point",["Skip it permanently","Review the concept and practise the weak point","Only increase study hours","Start a random chapter"]],
-    ["What does a completed study session record in NEXORA?","The session and its completion status",["Only a timer value","The session and its completion status","A verified board result","A paid subscription"]]
-   ];
-   fallback.forEach(q=>{if(qs.length<5)qs.push(q)});
+  [{q:"What should you do when you make a repeated mistake?",correct:"Review the concept and practise the weak point",options:["Skip it permanently","Review the concept and practise the weak point","Only increase study hours","Start a random chapter"]},{q:"What does a completed study session record in NEXORA?",correct:"The session and its completion status",options:["Only a timer value","The session and its completion status","A verified board result","A paid subscription"]}]
+  .forEach(q=>{if(qs.length<5)qs.push(Object.assign(q,{type:"MCQ",marks:cfg.correct??1,negative:cfg.wrong??0,section:"General"}))});
  }
- return qs.slice(0,5);
+ return qs.slice(0,Math.min(10,qs.length));
 }
 function openProgressTest(){
  const day=cycleDay(),cfg=testConfig(),qs=testQuestions(),subject=cfg.type==="BOARD"?progressTestSubject(cycleDay()):null;
- $("sessionTitle").textContent=subject?`Day ${day} • ${subject} Board Test`:`Day ${day} • ${cfg.label}`;
- $("sessionMeta").textContent=`${qs.length} questions • Score scale: ${cfg.max} marks • One test at a time`;
- $("sessionBody").innerHTML=`<div class="notice">${subject?`Today’s paper is <b>${esc(subject)}</b>. Board subjects are tested separately, not all together.`:`This progress test uses a ${cfg.max}-mark NEXORA scoring scale. It is an original practice test, not a verified official paper.`}</div>`+
- qs.map((x,i)=>`<div class="practice-q"><b>${i+1}. ${esc(x[0])}</b>${x[2].map(o=>`<label class="test-option"><input type="radio" name="test_${i}" value="${esc(o)}">${esc(o)}</label>`).join("")}</div>`).join("")+
- `<div class="session-actions"><button class="btn primary" onclick="submitProgressTest()">Submit test</button></div><div id="testResult"></div>`;
+ const pattern=cfg.sections.map(x=>x.name+(x.questions?": "+x.questions+" Q":"")).join(" • ");
+ const markText=cfg.correct!=null?("Correct +"+cfg.correct+" / Wrong "+cfg.wrong):"Exam-specific marking";
+ $("sessionTitle").textContent=subject?"Day "+day+" • "+subject+" Board Test":"Day "+day+" • "+cfg.label;
+ $("sessionMeta").textContent=qs.length+" practice questions shown • Official pattern: "+(cfg.totalQuestions||"varies")+" questions • "+(cfg.max||"varies")+" marks • "+(cfg.duration||"—")+" min";
+ $("sessionBody").innerHTML='<div class="notice"><b>Pattern:</b> '+esc(pattern||"Exam-specific sections")+'<br><b>Types:</b> '+esc(cfg.types)+'<br><b>Marking:</b> '+esc(markText)+'<br><span class="muted small">'+esc(cfg.note||"")+'</span></div>'+
+ '<div class="notice">'+(subject?"Today’s paper is <b>"+esc(subject)+"</b>. Board subjects are tested separately.":"This is an original NEXORA practice simulation. The exam pattern/marking is shown above, but the current built-in knowledge bank does not yet contain enough questions to create the full official-length paper.")+'</div>'+
+ qs.map((x,i)=>'<div class="practice-q"><b>'+(i+1)+'. ['+esc(x.type)+' • '+x.marks+' mark] '+esc(x.q)+'</b>'+x.options.map(o=>'<label class="test-option"><input type="radio" name="test_'+i+'" value="'+esc(o)+'">'+esc(o)+'</label>').join("")+'</div>').join("")+
+ '<div class="session-actions"><button class="btn primary" onclick="submitProgressTest()">Submit test</button></div><div id="testResult"></div>';
  $("studySessionModal").classList.add("open");
 }
 function submitProgressTest(){
- const qs=testQuestions(),day=cycleDay(),cfg=testConfig();let correctCount=0,mistakes=[];
- qs.forEach((x,i)=>{const el=document.querySelector(`input[name="test_${i}"]:checked`);if(el&&el.value===x[1])correctCount++;else mistakes.push({question:x[0],correct:x[1],chosen:el?el.value:"Not answered"});});
- const pct=Math.round(correctCount/Math.max(1,qs.length)*100),marks=Math.round(cfg.max*pct/100),subject=cfg.type==="BOARD"?progressTestSubject(cycleDay()):null;
- updateUserData(d=>{
-   d.tests=d.tests||[];
-   d.tests.unshift({day,subject,examType:cfg.type,score:marks,maxMarks:cfg.max,rawScore:correctCount,totalQuestions:qs.length,percentage:pct,mistakes,date:new Date().toISOString()});
-   d.mistakes=d.mistakes||[];
-   mistakes.forEach(m=>d.mistakes.unshift(Object.assign({day,subject,date:new Date().toISOString()},m)));
-   d.testDays=d.testDays||{};d.testDays[day]=true;
-   d.lastTest={day,subject,examType:cfg.type,score:marks,maxMarks:cfg.max,rawScore:correctCount,totalQuestions:qs.length,percentage:pct};
-   return d
+ const qs=testQuestions(),day=cycleDay(),cfg=testConfig();let marks=0,maxShown=0,mistakes=[];
+ qs.forEach((x,i)=>{
+  const el=document.querySelector('input[name="test_'+i+'"]:checked');maxShown+=Number(x.marks)||1;
+  if(el&&el.value===x.correct)marks+=Number(x.marks)||1;
+  else{if(el)marks+=Number(x.negative)||0;mistakes.push({question:x.q,correct:x.correct,chosen:el?el.value:"Not answered",marks:x.marks,negative:x.negative,type:x.type,section:x.section})}
  });
- if(pct<60)toast("Test saved. Weak areas will be prioritised in upcoming sessions.");
- else if(pct<80)toast("Test saved. Keep reviewing the missed questions.");
- else toast("Test saved. Continue with the next day.");
- const boardNext=cfg.type==="BOARD" ? (Number(day)-6) : null;
- advanceStudyDay("test-complete");
- if(cfg.type==="BOARD" && boardNext && boardNext<Math.min(6,subjects().length)){
-   updateUserData(d=>{d.boardNextPaperIndex=boardNext;d.boardNextPaperStatus="choice";return d});
- }
- const nextBoardChoice=(cfg.type==="BOARD" && boardNext && boardNext<Math.min(6,subjects().length))?
-   '<div class="lesson-block" style="margin-top:10px"><b>Next board paper</b><p class="muted small">Choose when you want to take the next subject paper.</p><button class="btn primary" style="margin-top:8px" onclick="showBoardNextPaperChoice()">Choose: Today / Tomorrow / Later</button></div>':"";
- $("testResult").innerHTML=`<div class="lesson-block"><h3>Score: ${marks}/${cfg.max} (${pct}%)</h3><p>${subject?esc(subject)+" • ":""}${mistakes.length?mistakes.length+" mistake(s) saved for revision.":"No mistakes recorded."}</p>${mistakes.map(m=>`<div class="muted small" style="margin-top:7px">• ${esc(m.question)}<br>Correct: ${esc(m.correct)} • Your answer: ${esc(m.chosen)}</div>`).join("")}</div>${nextBoardChoice}<button class="btn" style="margin-top:10px" onclick="closeStudySession();renderAll()">Continue</button>`;
+ const pct=Math.max(0,Math.round(marks/Math.max(1,maxShown)*100)),scaled=cfg.max?Math.round(cfg.max*pct/100):marks,subject=cfg.type==="BOARD"?progressTestSubject(cycleDay()):null;
+ updateUserData(d=>{
+  d.tests=d.tests||[];d.tests.unshift({day,subject,examType:cfg.type,patternYear:cfg.year,score:scaled,maxMarks:cfg.max||maxShown,rawScore:marks,maxShown,percentage:pct,totalQuestions:qs.length,mistakes,date:new Date().toISOString()});
+  d.mistakes=d.mistakes||[];mistakes.forEach(m=>d.mistakes.unshift(Object.assign({day,subject,date:new Date().toISOString()},m)));
+  d.testDays=d.testDays||{};d.testDays[day]=true;d.lastTest={day,subject,examType:cfg.type,patternYear:cfg.year,score:scaled,maxMarks:cfg.max||maxShown,rawScore:marks,maxShown,totalQuestions:qs.length,percentage:pct};return d
+ });
+ toast(pct<60?"Test saved. Weak areas will be prioritised in upcoming sessions.":pct<80?"Test saved. Keep reviewing the missed questions.":"Test saved. Continue with the next day.");
+ const boardNext=cfg.type==="BOARD"?(Number(day)-6):null;advanceStudyDay("test-complete");
+ if(cfg.type==="BOARD"&&boardNext&&boardNext<Math.min(6,subjects().length))updateUserData(d=>{d.boardNextPaperIndex=boardNext;d.boardNextPaperStatus="choice";return d});
+ const nextBoardChoice=(cfg.type==="BOARD"&&boardNext&&boardNext<Math.min(6,subjects().length))?'<div class="lesson-block" style="margin-top:10px"><b>Next board paper</b><p class="muted small">Choose when you want to take the next subject paper.</p><button class="btn primary" style="margin-top:8px" onclick="showBoardNextPaperChoice()">Choose: Today / Tomorrow / Later</button></div>':"";
+ $("testResult").innerHTML='<div class="lesson-block"><h3>Score: '+scaled+'/'+(cfg.max||maxShown)+' ('+pct+'%)</h3><p>'+(subject?esc(subject)+" • ":"")+'Raw simulation marks: '+marks+'/'+maxShown+'. '+(mistakes.length?mistakes.length+" mistake(s) saved for revision.":"No mistakes recorded.")+'</p>'+mistakes.map(m=>'<div class="muted small" style="margin-top:7px">• '+esc(m.question)+'<br>Correct: '+esc(m.correct)+' • Your answer: '+esc(m.chosen)+' • Marking: +'+m.marks+' / '+m.negative+'</div>').join("")+'</div>'+nextBoardChoice+'<button class="btn" style="margin-top:10px" onclick="closeStudySession();renderAll()">Continue</button>';
  renderHome();
 }
-
-function chooseBoardNextPaper(choice){
+function chooseBoardNextPaper(function chooseBoardNextPaper(choice){
  const d=userData(),idx=Number(d.boardNextPaperIndex)||1;
  updateUserData(x=>{
    x.boardNextPaperIndex=idx;
