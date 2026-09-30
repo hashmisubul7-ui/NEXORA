@@ -956,9 +956,32 @@ function testQuestions(){
  const selectedTasks=target?all.filter(t=>String(t.subject).toLowerCase()===String(target).toLowerCase()):all;
  const seen=new Set(),qs=[],topicFor=(subject)=>roadmapTopicFor(subject,day);
  const normTopic=s=>String(s||"").toLowerCase().replace(/[^a-z0-9]+/g," ").trim();
- const add=(q,a,section,marks,negative,topic)=>{
+ const explainTestQuestion=(q,a,topic)=>{
+   const s=String(q||"").toLowerCase(),ans=String(a||"");
+   if(/equal distances.*20.*30|average speed/.test(s))return "For equal distances, average speed = 2v₁v₂/(v₁+v₂) = 2×20×30/50 = 24 m/s.";
+   if(/force.*15.*3 kg|find acceleration/.test(s))return "Using Newton's second law, a = F/m = 15/3 = 5 m/s².";
+   if(/velocity changes.*10.*25.*3 s|acceleration/.test(s))return "Acceleration = (final velocity − initial velocity)/time = (25−10)/3 = 5 m/s².";
+   if(/si unit of force/.test(s))return "The SI unit of force is the newton (N), defined as kg·m/s².";
+   if(/18 g.*water|moles.*water/.test(s))return "Molar mass of H₂O is 18 g/mol, so 18 g corresponds to 1 mol.";
+   if(/17 protons.*atomic number/.test(s))return "Atomic number equals the number of protons, so it is 17.";
+   if(/molar mass.*co₂|molar mass.*co2/.test(s))return "CO₂ has molar mass 12 + 16 + 16 = 44 g/mol.";
+   if(/neutral atom.*8 protons|how many electrons/.test(s))return "A neutral atom has equal numbers of protons and electrons, so it has 8 electrons.";
+   if(/x²−9x\+20|x2.*9x.*20/.test(s))return "Factorise x²−9x+20 = (x−4)(x−5), so x = 4 or 5.";
+   if(/discriminant.*x²−4x\+4|discriminant.*x2.*4x/.test(s))return "For ax²+bx+c, D = b²−4ac. Here D = (−4)²−4(1)(4) = 0.";
+   if(/sin θ=3\/5|sin.*3\/5/.test(s))return "For an acute angle, cos θ = √(1−sin²θ) = √(1−9/25) = 4/5.";
+   if(/tan θ=1|tan.*1.*acute/.test(s))return "tan 45° = 1, and the angle is acute, so θ = 45°.";
+   return "Correct answer: "+ans+". Review the "+(topic||"current")+" concept and compare your working with the answer.";
+};
+const difficultyFor=(q)=>{
+   const s=String(q||"").toLowerCase();
+   if(/newton|discriminant|molar mass|atomic number|sin|tan/.test(s))return "Easy";
+   if(/average speed|acceleration|solve/.test(s))return "Medium";
+   return "Easy";
+};
+const add=(q,a,section,marks,negative,topic)=>{
    if(!q||seen.has(q))return;seen.add(q);
-   qs.push({q,correct:String(a),options:buildTestOptions(a,q),type:"MCQ",marks:Number(marks??cfg.correct??1)||1,negative:Number(negative??cfg.wrong??0)||0,section:section||"General",topic:topic||topicFor(section)});
+   const t=topic||topicFor(section);
+   qs.push({q,correct:String(a),options:buildTestOptions(a,q),type:"MCQ",difficulty:difficultyFor(q),explanation:explainTestQuestion(q,a,t),marks:Number(marks??cfg.correct??1)||1,negative:Number(negative??cfg.wrong??0)||0,section:section||"General",topic:t});
  };
  // 1) First priority: the exact topic assigned by today's roadmap.
  selectedTasks.forEach(t=>{
@@ -1054,7 +1077,7 @@ function submitProgressTest(autoSubmit){
  qs.forEach((x,i)=>{
   const el=document.querySelector('input[name="test_'+i+'"]:checked');maxShown+=Number(x.marks)||1;
   if(el&&el.value===x.correct)marks+=Number(x.marks)||1;
-  else{if(el)marks+=Number(x.negative)||0;mistakes.push({question:x.q,correct:x.correct,chosen:el?el.value:"Not answered",marks:x.marks,negative:x.negative,type:x.type,section:x.section})}
+  else{if(el)marks+=Number(x.negative)||0;mistakes.push({question:x.q,correct:x.correct,chosen:el?el.value:"Not answered",marks:x.marks,negative:x.negative,type:x.type,difficulty:x.difficulty,explanation:x.explanation,section:x.section,topic:x.topic})}
  });
  const pct=Math.max(0,Math.round(marks/Math.max(1,maxShown)*100)),scaled=cfg.max?Math.round(cfg.max*pct/100):marks,subject=cfg.type==="BOARD"?boardTestSubject():null;
  updateUserData(d=>{
@@ -1068,7 +1091,7 @@ function submitProgressTest(autoSubmit){
  const hasNextBoard=cfg.type==="BOARD"&&boardNext<Math.min(6,subjects().length);
  if(hasNextBoard)updateUserData(d=>{d.boardNextPaperIndex=boardNext;d.boardNextPaperSubject=boardSubjectAt(boardNext);d.boardNextPaperStatus="choice";d.boardNextPaperDue=null;return d});
  const nextBoardChoice=hasNextBoard?'<div class="lesson-block" style="margin-top:10px"><b>Next board paper: '+esc(boardSubjectAt(boardNext))+'</b><p class="muted small">Choose when you want to take the next subject paper.</p><button class="btn primary" style="margin-top:8px" onclick="showBoardNextPaperChoice()">Choose: Today / Tomorrow / Later</button></div>':"";
- $("testResult").innerHTML='<div class="lesson-block"><h3>Score: '+scaled+'/'+(cfg.max||maxShown)+' ('+pct+'%)</h3><p>'+(subject?esc(subject)+" • ":"")+'Raw simulation marks: '+marks+'/'+maxShown+'. '+(mistakes.length?mistakes.length+" mistake(s) saved for revision.":"No mistakes recorded.")+'</p>'+mistakes.map(m=>'<div class="muted small" style="margin-top:7px">• '+esc(m.question)+'<br>Correct: '+esc(m.correct)+' • Your answer: '+esc(m.chosen)+'</div>').join("")+'</div>'+nextBoardChoice+'<button class="btn" style="margin-top:10px" onclick="closeStudySession();renderAll()">Continue</button>';
+ $("testResult").innerHTML='<div class="lesson-block"><h3>Score: '+scaled+'/'+(cfg.max||maxShown)+' ('+pct+'%)</h3><p>'+(subject?esc(subject)+" • ":"")+'Raw simulation marks: '+marks+'/'+maxShown+'. '+(mistakes.length?mistakes.length+" mistake(s) saved for revision.":"No mistakes recorded.")+'</p>'+mistakes.map(m=>'<div class="muted small" style="margin-top:9px;padding:10px;border-radius:10px;background:var(--surface2)"><b>• '+esc(m.question)+'</b><br><span>Correct: '+esc(m.correct)+' • Your answer: '+esc(m.chosen)+'</span><br><span class="muted">Topic: '+esc(m.topic||"General")+' • Difficulty: '+esc(m.difficulty||"—")+'</span><br><span>Explanation: '+esc(m.explanation||("Correct answer: "+m.correct))+'</span></div>').join("")+'</div>'+nextBoardChoice+'<button class="btn" style="margin-top:10px" onclick="closeStudySession();renderAll()">Continue</button>';
  renderHome();
 }
 function chooseBoardNextPaper(choice){
