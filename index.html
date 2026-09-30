@@ -404,6 +404,84 @@ const curriculumCatalog={
  "CAT":{subjects:["VARC","DILR","Quantitative Ability"],topics:{}},
  "GATE":{subjects:["General Aptitude","Engineering Subject"],topics:{}}
 };
+const questionBankByTopic={
+ "Physics":{
+  "Kinematics":[
+   ["A car covers 60 m in 5 s. What is its average speed?","12 m/s"],
+   ["A particle changes velocity from 4 m/s to 16 m/s in 3 s. Find acceleration.","4 m/s²"],
+   ["An object starts from rest with acceleration 2 m/s². What is its velocity after 5 s?","10 m/s"],
+   ["For uniform velocity, acceleration is?","0 m/s²"],
+   ["A body travels 20 m east and then 20 m west. What is its displacement?","0 m"],
+   ["The slope of a position-time graph represents?","Velocity"],
+   ["The slope of a velocity-time graph represents?","Acceleration"],
+   ["If speed is constant in a circular path, is velocity constant?","No"]
+  ],
+  "Newton's Laws":[
+   ["A 5 kg body is acted on by a net force of 20 N. Find acceleration.","4 m/s²"],
+   ["If net force on an object is zero, its acceleration is?","0"],
+   ["The tendency of an object to resist change in motion is called?","Inertia"],
+   ["Action and reaction forces act on?","Different interacting bodies"],
+   ["A 2 kg object accelerates at 3 m/s². Find net force.","6 N"],
+   ["Which Newton law explains inertia?","First law"],
+   ["Which Newton law relates net force, mass and acceleration?","Second law"],
+   ["If the same force acts on double the mass, acceleration becomes?","Half"]
+  ],
+  "Units & Measurements":[
+   ["Convert 18 km/h to m/s.","5 m/s"],
+   ["Convert 54 km/h to m/s.","15 m/s"],
+   ["What is the SI unit of time?","s"],
+   ["What is the SI unit of length?","m"],
+   ["What is the SI unit of temperature?","K"],
+   ["What is the SI unit of amount of substance?","mol"],
+   ["1 m/s is equal to how many km/h?","3.6 km/h"],
+   ["Which SI base unit measures electric current?","A"]
+  ]
+ },
+ "Chemistry":{
+  "Some Basic Concepts of Chemistry":[
+   ["What is the molar mass of H₂O?","18 g/mol"],
+   ["How many moles are in 44 g of CO₂?","1 mol"],
+   ["How many moles are in 22 g of CO₂?","0.5 mol"],
+   ["What is the formula for number of moles from mass?","mass / molar mass"],
+   ["What is Avogadro's number approximately?","6.022 × 10²³"],
+   ["How many molecules are present in 2 mol of a substance?","1.2044 × 10²⁴"],
+   ["What is the molar mass of O₂?","32 g/mol"],
+   ["What is the molar mass of NaCl approximately?","58.5 g/mol"]
+  ],
+  "Atomic Structure":[
+   ["An atom has 12 protons. What is its atomic number?","12"],
+   ["A neutral atom has 17 electrons. How many protons does it have?","17"],
+   ["An atom has 11 protons and 12 neutrons. Find mass number.","23"],
+   ["Which particle has a negative charge?","Electron"],
+   ["Which particle has a positive charge?","Proton"],
+   ["Which particle has no charge?","Neutron"],
+   ["Atomic number represents the number of?","Protons"],
+   ["For a neutral atom, number of electrons equals number of?","Protons"]
+  ]
+ },
+ "Mathematics":{
+  "Quadratic Equations":[
+   ["Solve x²−7x+12=0.","3 and 4"],
+   ["For x²−6x+9=0, the roots are?","3 and 3"],
+   ["What is the discriminant of x²−5x+6=0?","1"],
+   ["If the discriminant is zero, the roots are?","Equal real roots"],
+   ["For x²−4=0, the roots are?","2 and -2"],
+   ["What is the sum of roots of ax²+bx+c=0?","-b/a"],
+   ["What is the product of roots of ax²+bx+c=0?","c/a"],
+   ["If roots are 2 and 5, their sum is?","7"]
+  ],
+  "Trigonometry":[
+   ["If sin θ=5/13 for an acute angle, find cos θ.","12/13"],
+   ["If cos θ=3/5 for an acute angle, find sin θ.","4/5"],
+   ["If tan θ=3/4, find sin θ for an acute angle.","3/5"],
+   ["What is sin 30°?","1/2"],
+   ["What is cos 60°?","1/2"],
+   ["What is tan 45°?","1"],
+   ["What is sin 90°?","1"],
+   ["What is cos 0°?","1"]
+  ]
+ }
+};
 function curriculumForProfile(p){return curriculumCatalog[String(p?.exam||p?.examKey||"")]||null}
 function curriculumSubjects(p){const c=curriculumForProfile(p);return c?c.subjects:null}
 const knowledgeBank={
