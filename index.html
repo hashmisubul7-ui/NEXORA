@@ -845,19 +845,40 @@ function testConfig(){
  return Object.assign({},b,{label:b.name});
 }
 let testTimerInterval=null,testTimerDeadline=0,testSubmitted=false,activeTestQuestions=[];
-function buildTestOptions(correct){
- const base=["0","1","2","3","4","5","6","8","10","12","20","25","50","100","1/2","3/4","4/5","45°","negative","positive","zero","Equal real roots","Second law","kg","m/s","m/s²","Not sure"];
- const opts=[String(correct)],pool=base.filter(x=>x!==String(correct));
- for(const x of pool){if(opts.length>=4)break;if(!opts.includes(x))opts.push(x)}
- while(opts.length<4)opts.push("Not sure");
- return opts;
+function buildTestOptions(correct,question){
+ const c=String(correct).trim(),q=String(question||"").toLowerCase();
+ const known=[
+  [/average speed|equal distances/,[c,"25 m/s","20 m/s","30 m/s"]],
+  [/force of 15 n|acceleration/,[c,"3 m/s²","45 m/s²","12 m/s²"]],
+  [/velocity changes|find acceleration/,[c,"3 m/s²","5 m/s","15 m/s²"]],
+  [/si unit of force/,[c,"J","W","Pa"]],
+  [/moles.*18 g.*water|18 g.*water/,[c,"0.5 mol","2 mol","18 mol"]],
+  [/17 protons|atomic number/,[c,"8","35","18"]],
+  [/molar mass.*co.?2/,[c,"28 g/mol","32 g/mol","40 g/mol"]],
+  [/neutral atom.*8 protons|8 protons.*electrons/,[c,"6","10","16"]],
+  [/x²−9x\+20|x2.*9x.*20/,[c,"2, 10","-4, -5","3, 6"]],
+  [/discriminant.*x²−4x\+4|discriminant.*x2.*4x/,[c,"4","8","-4"]],
+  [/sin.*3\/5.*acute|cos.*3\/5/,[c,"3/5","5/3","1/2"]],
+  [/tan.*1.*acute|tan.*theta.*1/,[c,"30°","60°","90°"]],
+  [/repeated mistake/,[c,"Skip the topic","Memorise the answer only","Move to a new subject"]],
+  [/completed study session/,[c,"Only the timer value","Only the checkbox","Only the test score"]]
+ ];
+ for(const [re,arr] of known)if(re.test(q))return [...new Set(arr.map(String))].slice(0,4);
+ const numeric=Number(c);
+ if(Number.isFinite(numeric)){
+   const deltas=Math.abs(numeric)>=10?[1,-1,2]:[1,-1,2];
+   const opts=[c,...deltas.map(d=>String(numeric+d)),String(numeric*2)];
+   return [...new Set(opts)].slice(0,4);
+ }
+ const base=["Correct concept","Incorrect concept","Insufficient information","None of these"];
+ return [...new Set([c,...base.filter(x=>x!==c)])].slice(0,4);
 }
 function testQuestions(){
  const cfg=testConfig(),target=cfg.type==="BOARD"?boardTestSubject():null,all=allTasks(),tasks=target?all.filter(t=>String(t.subject).toLowerCase()===String(target).toLowerCase()):all;
  const seen=new Set(),qs=[];
  const add=(q,a,section,marks,negative)=>{
    if(!q||seen.has(q))return;seen.add(q);
-   qs.push({q,correct:String(a),options:buildTestOptions(a),type:"MCQ",marks:Number(marks??cfg.correct??1)||1,negative:Number(negative??cfg.wrong??0)||0,section:section||"General"});
+   qs.push({q,correct:String(a),options:buildTestOptions(a,q),type:"MCQ",marks:Number(marks??cfg.correct??1)||1,negative:Number(negative??cfg.wrong??0)||0,section:section||"General"});
  };
  tasks.forEach(t=>(t.lesson.practice||[]).forEach(q=>add(q[0],q[1],t.subject)));
  if(cfg.type==="BOARD"){
