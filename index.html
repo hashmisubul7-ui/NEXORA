@@ -629,11 +629,110 @@ const pcmFoundationFormulas={
   "Trigonometry":["sin²θ+cos²θ=1","tanθ=sinθ/cosθ"]
  }
 };
-function makePCMFoundationLesson(subject,topic){
- const fs=(pcmFoundationFormulas[subject]&&pcmFoundationFormulas[subject][topic])||["Write the key definition and conditions for this chapter","Record the main formulas and standard results","List one common mistake to avoid"];
- return {title:topic+" — Foundation Lesson",concept:subject+" chapter: "+topic+". This chapter is now mapped in NEXORA's PCM curriculum. The lesson starts with the core idea and routes the student to practice.",formulas:fs,example:"Take one standard problem from this chapter: identify the given data, choose the relevant principle/formula, solve step by step, then verify the result.",practice:[["Write the main definition or principle of "+topic+".","Self-check"],["Write the key formula/result you would use first in a typical "+topic+" problem.","Self-check"]]};
+function pcmRichDetails(subject,topic){
+ const F=(pcmFoundationFormulas[subject]&&pcmFoundationFormulas[subject][topic])||[];
+ const common={
+  Physics:{
+   core:["Identify the physical quantities, their SI units and dimensions before solving.","Draw a clean diagram or choose a coordinate/sign convention when direction matters.","Connect the governing law to the given data; do not substitute numbers before the relation is clear."],
+   mistakes:["Mixing scalar and vector quantities.","Using a formula without checking its conditions or units.","Ignoring sign convention or limiting cases."]
+  },
+  Chemistry:{
+   core:["Start from definitions, symbols, units and chemical equations before calculation.","Track stoichiometry, limiting conditions and significant figures carefully.","Use periodic, structural and equilibrium ideas to explain trends instead of memorising isolated facts."],
+   mistakes:["Using inconsistent units or mole ratios.","Ignoring charge, oxidation state or reaction conditions.","Confusing similar terms such as molarity/molality or nucleophile/base."]
+  },
+  Mathematics:{
+   core:["Write the domain and conditions before manipulating an expression.","Choose the standard identity/theorem that reduces the problem most directly.","After solving, substitute back or test boundary/sign conditions where applicable."],
+   mistakes:["Dividing by an expression that can be zero.","Dropping domain restrictions or extraneous roots.","Using an identity/theorem outside its stated conditions."]
+  }
+ }[subject];
+ const topicRules={
+  "Units & Measurements":["units, dimensions and significant figures","measurement errors and uncertainty","dimensional consistency"],
+  "Kinematics":["position, displacement, velocity and acceleration","motion graphs","equations of uniformly accelerated motion"],
+  "Laws of Motion":["Newton's laws","free-body diagrams","friction, tension and connected bodies"],
+  "Work, Energy & Power":["work by constant and variable forces","work-energy theorem","conservation of mechanical energy and power"],
+  "Rotational Motion":["angular kinematics","torque and rotational dynamics","moment of inertia and angular momentum"],
+  "Gravitation":["Newton's law of gravitation","gravitational field and potential","orbital and escape motion"],
+  "Properties of Solids and Liquids":["elasticity and stress-strain behaviour","fluid pressure and flow","surface tension and viscosity"],
+  "Thermodynamics":["system, state variables and processes","first law and work/heat","second law and entropy"],
+  "Kinetic Theory of Gases":["ideal-gas model","molecular speeds and kinetic energy","temperature-pressure relations"],
+  "Oscillations and Waves":["simple harmonic motion","energy and phase in oscillations","wave equation and superposition"],
+  "Electrostatics":["Coulomb interaction and electric field","electric potential and potential energy","Gauss law and capacitance"],
+  "Current Electricity":["current, resistance and Ohm law","series-parallel circuits and Kirchhoff laws","electrical energy and power"],
+  "Magnetic Effects of Current and Magnetism":["magnetic field due to currents","force on charges and conductors","motion of charged particles in magnetic fields"],
+  "Electromagnetic Induction and Alternating Currents":["magnetic flux and Faraday law","Lenz law and induced emf","AC voltage, current and reactance"],
+  "Electromagnetic Waves":["displacement current idea","properties of electromagnetic waves","spectrum and applications"],
+  "Optics":["reflection and refraction","lenses, mirrors and image formation","wave optics and interference"],
+  "Dual Nature of Matter and Radiation":["photoelectric effect","photon energy and momentum","de Broglie matter waves"],
+  "Atoms and Nuclei":["atomic models and spectra","Bohr energy levels","nuclear mass, radioactivity and binding energy"],
+  "Electronic Devices":["semiconductor basics and p-n junctions","diodes and rectification","logic gates and digital basics"],
+  "Experimental Skills":["measurement and least count","errors, graphs and uncertainty","instrument-based reasoning"],
+  "Some Basic Concepts of Chemistry":["mole concept and molar mass","stoichiometry and limiting reagent","concentration terms and calculations"],
+  "Atomic Structure":["electromagnetic radiation","Bohr model and spectra","quantum numbers and electronic configuration"],
+  "Chemical Bonding":["Lewis structures and formal charge","VSEPR and molecular shape","hybridisation and molecular orbital ideas"],
+  "Chemical Thermodynamics":["system and state functions","enthalpy and Hess law","entropy, Gibbs energy and spontaneity"],
+  "Solutions":["concentration terms","Raoult law and vapour pressure","colligative properties"],
+  "Equilibrium":["dynamic equilibrium","Kc/Kp and Le Chatelier principle","ionic equilibrium and pH"],
+  "Redox Reactions and Electrochemistry":["oxidation number and balancing","galvanic/electrolytic cells","Nernst equation and Faraday laws"],
+  "Chemical Kinetics":["rate law and order","integrated rate equations","Arrhenius equation and activation energy"],
+  "Classification of Elements and Periodicity in Properties":["modern periodic law","electronic configuration and periodic trends","effective nuclear charge and size"],
+  "p-Block Elements":["group-wise electronic configuration","oxidation states and anomalous behaviour","important compounds and trends"],
+  "d- and f-Block Elements":["transition-metal configuration","variable oxidation states and colour","lanthanide/actinide trends"],
+  "Coordination Compounds":["ligands and coordination number","isomerism and nomenclature","bonding, geometry and magnetic behaviour"],
+  "Purification and Characterisation of Organic Compounds":["separation methods","qualitative elemental analysis","basic spectroscopic/characterisation ideas"],
+  "Some Basic Principles of Organic Chemistry":["structure and hybridisation","inductive, resonance and hyperconjugation effects","acidity, basicity and reaction intermediates"],
+  "Hydrocarbons":["alkane reactions","alkene/alkyne addition","aromaticity and electrophilic substitution"],
+  "Organic Compounds Containing Halogens":["C-X bond and leaving groups","SN1/SN2 and elimination","important haloalkane/haloarene reactions"],
+  "Organic Compounds Containing Oxygen":["alcohols and phenols","ethers","oxidation, dehydration and related reactions"],
+  "Aldehydes, Ketones and Carboxylic Acids":["carbonyl structure and reactivity","nucleophilic addition","oxidation/reduction and acidity"],
+  "Amines":["classification and basicity","preparation and reactions","diazonium salts and aromatic amines"],
+  "Biomolecules and Polymers":["carbohydrates and proteins","nucleic acids and enzymes","addition/condensation polymers"],
+  "Principles Related to Practical Chemistry":["qualitative salt analysis","titration and indicators","organic functional-group tests"],
+  "Sets, Relations and Functions":["set operations and Venn diagrams","relations and equivalence ideas","domain, range and standard functions"],
+  "Complex Numbers and Quadratic Equations":["complex-plane representation","modulus, conjugate and algebra","roots and nature of quadratic roots"],
+  "Matrices and Determinants":["matrix operations","determinants and properties","inverse and linear equations"],
+  "Permutations and Combinations":["fundamental counting principle","arrangements with restrictions","selections and combinations"],
+  "Binomial Theorem":["general term","middle and independent terms","coefficient-based problems"],
+  "Sequences and Series":["AP and GP","special sums","recurrence and series manipulation"],
+  "Limits, Continuity and Differentiability":["standard limits","continuity conditions","derivative as rate and tangent slope"],
+  "Integral Calculus":["indefinite integration","definite integral properties","area/accumulation applications"],
+  "Differential Equations":["order and degree","formation of differential equations","standard first-order solutions"],
+  "Coordinate Geometry":["distance, section and slope","straight lines and circles","conic-based coordinate methods"],
+  "Three Dimensional Geometry":["direction ratios/cosines","line and plane equations","angles and distances in 3D"],
+  "Vector Algebra":["vector representation","dot and cross products","geometric and projection applications"],
+  "Statistics and Probability":["central tendency and dispersion","basic probability rules","conditional probability and distributions"],
+  "Trigonometry":["trigonometric identities","equations and general solutions","inverse functions and transformations"]
+ };
+ const core=topicRules[topic]||[topic+" definitions and notation",topic+" standard methods and identities",topic+" applications and problem-solving strategy"];
+ const fs=F.length?F:["List the defining relation for "+core[0]+".","Write the standard result used for "+core[1]+".","State the condition or restriction that must hold in "+core[2]+"."];
+ const examples=[
+  "Worked example A: identify the given quantities for "+core[0]+", write the governing relation, substitute only after checking units/conditions, and verify the final result.",
+  "Worked example B: take a standard JEE-style problem on "+core[1]+". Draw the required representation, reduce it to the relevant equation/identity, solve step by step, then check the answer against limiting or sign conditions."
+ ];
+ const practice=[
+  ["Define the main idea involved in "+core[0]+".","Self-check: state the definition and one SI/algebraic condition."],
+  ["Write the key relation used for "+core[1]+".","Self-check: write the formula and explain each symbol."],
+  ["What is one condition or restriction that matters in "+core[2]+"?","Self-check: state when the method is valid."],
+  ["Give one common mistake while solving a "+topic+" problem.","Self-check: compare with the common-mistake list."],
+  ["Create one numerical problem from "+topic+" and solve it using the standard method.","Self-check: verify units, signs and the final value."]
+ ];
+ return {
+  title:topic+" — Detailed NEXORA Lesson",
+  concept:subject+" • "+topic+"\n\nCore areas:\n• "+core.join("\n• "),
+  formulas:fs,
+  example:examples.join("\n\n"),
+  practice,
+  commonMistakes:common.mistakes,
+  revision:common.core,
+  testTopics:core,
+  detailLevel:"detailed-starter"
+ };
 }
-Object.keys(pcmChapterCatalog).forEach(subject=>{knowledgeBank[subject]=knowledgeBank[subject]||{};pcmChapterCatalog[subject].forEach(topic=>{if(!knowledgeBank[subject][topic])knowledgeBank[subject][topic]=makePCMFoundationLesson(subject,topic);});});
+Object.keys(pcmChapterCatalog).forEach(subject=>{
+ knowledgeBank[subject]=knowledgeBank[subject]||{};
+ pcmChapterCatalog[subject].forEach(topic=>{
+  if(!knowledgeBank[subject][topic]) knowledgeBank[subject][topic]=makePCMFoundationLesson(subject,topic);
+ });
+});
 const lessonBank={
  "physics":{
   "kinematics":{title:"Kinematics — Motion Basics",concept:"Kinematics describes motion using displacement, velocity and acceleration without focusing on its cause.",formulas:["v = u + at","s = ut + ½at²","v² = u² + 2as"],example:"A body starts from rest and accelerates at 2 m/s² for 5 s. v = 0 + 2×5 = 10 m/s.",practice:[["A car starts from rest with a=3 m/s² for 4 s. Find v.","12 m/s"],["If u=5 m/s, a=2 m/s² and t=3 s, find v.","11 m/s"]]},
