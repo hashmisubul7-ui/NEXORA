@@ -730,7 +730,7 @@ function pcmRichDetails(subject,topic){
 Object.keys(pcmChapterCatalog).forEach(subject=>{
  knowledgeBank[subject]=knowledgeBank[subject]||{};
  pcmChapterCatalog[subject].forEach(topic=>{
-  if(!knowledgeBank[subject][topic]) knowledgeBank[subject][topic]=makePCMFoundationLesson(subject,topic);
+  if(!knowledgeBank[subject][topic]) knowledgeBank[subject][topic]=pcmRichDetails(subject,topic);
  });
 });
 const lessonBank={
