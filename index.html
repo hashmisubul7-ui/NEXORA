@@ -605,13 +605,35 @@ function lessonForTopic(subject,requestedTopic){
  return {title:subjectName+" — "+(requested||"Current Topic"),concept:practiceOnly?"Practice the selected topic, review mistakes and solve questions instead of restarting the syllabus.":"This topic is from your selected curriculum. NEXORA does not yet have a full built-in lesson for it, so use your current study material and the practice prompts below.",formulas:["Write the key definition/rule","Write the key formula or method","Record one common mistake"],example:"Use your current study material to write one worked example, then solve a similar problem without looking at the answer.",practice:[["Write the main definition/rule from "+(requested||"today's topic")+".","Self-check"],["Solve one representative problem from "+(requested||"today's topic")+" without looking at the solution.","Self-check"]]};
 }
 
+function normalizeTopicKey(s){return String(s||"").toLowerCase().replace(/[^a-z0-9]+/g," ").trim()}
+function topicWeaknesses(){
+ const rows=userData().mistakes||[],map={};
+ rows.forEach(m=>{
+  const subject=String(m.subject||"").trim(),topic=String(m.topic||"").trim();
+  if(!subject||!topic)return;
+  const key=subject+"||"+normalizeTopicKey(topic);
+  if(!map[key])map[key]={subject,topic,count:0,difficult:0};
+  map[key].count++;
+  if(String(m.difficulty||"").toLowerCase()==="hard")map[key].difficult++;
+ });
+ return Object.values(map).sort((a,b)=>(b.count*2+b.difficult)-(a.count*2+a.difficult));
+}
+function topicWeaknessFor(subject,topic){
+ const target=String(subject||"").toLowerCase(),t=normalizeTopicKey(topic);
+ return topicWeaknesses().find(x=>x.subject.toLowerCase()===target&&normalizeTopicKey(x.topic)===t)||null;
+}
+
 function taskForDay(subject,i,day){
  const p=profile(),subs=subjects(),weak=String(p?.weak||"").toLowerCase().split(",").map(x=>x.trim()).filter(Boolean);
  const mistakes=(userData().mistakes||[]).slice(0,20);
  const roadmapTopic=roadmapTopicFor(subject,day);
  const currentTopic=String(roadmapTopic||"").toLowerCase();
- const subjectMistakes=mistakes.filter(m=>String(m.question||"").toLowerCase().includes(currentTopic)||String(m.question||"").toLowerCase().includes(String(subject||"").toLowerCase()));
- const isWeak=weak.some(w=>subject.toLowerCase().includes(w)||w.includes(subject.toLowerCase()))||subjectMistakes.length>0;
+ const subjectMistakes=mistakes.filter(m=>{
+   const mt=String(m.topic||"").trim().toLowerCase();
+   return (mt&&mt===currentTopic)||(String(m.question||"").toLowerCase().includes(currentTopic)||String(m.question||"").toLowerCase().includes(String(subject||"").toLowerCase()));
+ });
+ const topicWeak=topicWeaknessFor(subject,roadmapTopic);
+ const isWeak=weak.some(w=>subject.toLowerCase().includes(w)||w.includes(subject.toLowerCase()))||subjectMistakes.length>0||!!topicWeak;
  const l=lessonForTopic(subject,roadmapTopic);
  const practiceOnly=p?.syllabusStatus==="practice_only"||p?.syllabusStatus==="complete";
  const mode=practiceOnly?"Practice":"Study";
@@ -619,7 +641,7 @@ function taskForDay(subject,i,day){
  const sum=weights.reduce((a,b)=>a+b,0)||1;
  let share=Math.max(10,Math.round(minutes(p?.time)*((isWeak?1.5:1))/sum));
  if(subjectMistakes.length)share=Math.max(share,Math.min(60,share+10));
- const focus=subjectMistakes.length?"Mistake review • ":isWeak?"Weak-area focus • ":"";
+ const focus=topicWeak?"Topic weakness • "+topicWeak.topic+" ("+topicWeak.count+" mistake"+(topicWeak.count===1?"":"s")+") • ":subjectMistakes.length?"Mistake review • ":isWeak?"Weak-area focus • ":"";
  return {id:"d"+day+"_"+i,subject,title:(isWeak?"Focus: ":"")+mode+": "+subject+" — "+l.title.split(" — ")[0],meta:focus+(practiceOnly?"Practice → questions → mistakes":"Learn → example → practice")+" • "+share+" min",minutes:share,lesson:l};
 }
 function allTasks(){
@@ -715,6 +737,8 @@ function renderHomeProgress(p){
    return '<div style="margin-top:10px"><div style="display:flex;justify-content:space-between;gap:8px;font-size:13px"><b>'+esc(s)+'</b><span class="muted">'+Math.min(finished,total)+'/'+total+'</span></div><div class="progressbar" style="margin-top:5px"><i style="width:'+pct+'%"></i></div></div>';
  }).join('');
  const focusMin=focus.reduce((a,x)=>a+Number(x.minutes||0),0);
+ const weakTopics=topicWeaknesses().slice(0,5);
+ const weakHtml=weakTopics.length?'<div class="card" style="margin-top:14px;padding:14px"><b class="small">🎯 Topics needing attention</b>'+weakTopics.map(x=>'<div class="profile-row"><span>'+esc(x.subject)+' — '+esc(x.topic)+'</span><b>'+x.count+' mistake'+(x.count===1?'':'s')+'</b></div>').join('')+'</div>':'';
  $("homeProgressSummary").innerHTML=
   '<div class="stats" style="margin:0;grid-template-columns:repeat(4,1fr)">\
    <div class="stat" style="padding:14px"><b style="font-size:22px">'+completed+'</b><span>sessions</span></div>\
@@ -728,7 +752,7 @@ function renderHomeProgress(p){
       (mistakes.length?' • '+mistakes.length+' mistake(s) available for revision.':' • No mistakes recorded in the latest result.')
       :'No progress test taken yet. Tests unlock on Days 7, 14 and 21.')+
   '</div>'+
-  (mistakes.length?'<div><b class="small">Recent mistakes</b>'+mistakes.slice(0,3).map(m=>'<div class="profile-row"><span>'+esc(m.question)+'</span><b>Review</b></div>').join('')+'</div>':'');
+  (mistakes.length?'<div><b class="small">Recent mistakes</b>'+mistakes.slice(0,3).map(m=>'<div class="profile-row"><span>'+esc(m.question)+'</span><b>Review</b></div>').join('')+'</div>':'');+weakHtml
 }
 function renderToday(){
  const box=$("todayTasks"), p=profile();
@@ -815,6 +839,8 @@ function renderRoadmap(){
  const pending=[7,14,21].includes(day)&&allTasks().every(t=>done[t.id])&&!testDays[day];
  html+='<div class="card section-card" style="margin-top:18px"><h3>Current learning state</h3><div class="profile-row"><span>Syllabus status</span><b>'+esc(p.syllabusStatus||"Not set")+'</b></div><div class="profile-row"><span>Current topic</span><b>'+esc(p.currentTopic||"Not set")+'</b></div><div class="profile-row"><span>Recorded mistakes</span><b>'+mistakes.length+'</b></div><div class="notice" style="margin-top:10px">'+(pending?'Today is ready for its progress test. Open Today to take it and unlock the next day.':'Complete every Today session to advance the roadmap.')+'</div></div>';
  html+='<div class="card section-card" style="margin-top:18px"><h3>Recent mistakes</h3>'+(mistakes.length?mistakes.slice(0,5).map(m=>'<div class="profile-row"><span>'+esc(m.question)+'</span><b>Review</b></div>').join(""):'<p class="muted">No test mistakes recorded yet.</p>')+'</div>';
+ const weakRoad=topicWeaknesses().slice(0,8);
+ html+='<div class="card section-card" style="margin-top:18px"><h3>🎯 Topic Weaknesses</h3>'+(weakRoad.length?weakRoad.map(x=>'<div class="profile-row"><span>'+esc(x.subject)+' — '+esc(x.topic)+'</span><b>'+x.count+' mistake'+(x.count===1?'':'s')+'</b></div>').join(""):'<p class="muted">No topic weakness recorded yet. Complete a test to build this automatically.</p>')+'</div>';
  $("roadmap").innerHTML=html;
  const h=d.history||[];
  $("history").innerHTML='<h3>Goal / cycle status</h3><p class="muted">Day '+day+'/21 • '+phase()+' • '+progress()+'% cycle progress.</p><p class="muted small">Cycle '+(Number(p.cycleCount||0)+1)+'. Progress is based on completed study sessions and required tests.</p><h3 style="margin-top:16px">Completed goals</h3>'+(h.length?h.map(x=>'<div class="profile-row"><span>'+esc(x.goal)+'</span><b>✓ '+new Date(x.date).toLocaleDateString()+'</b></div>').join(""):'<p class="muted">No completed goals yet.</p>');
