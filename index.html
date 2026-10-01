@@ -572,6 +572,68 @@ const knowledgeBank={
  }
 };
 
+/* NEXORA PCM COMPLETE CHAPTER MAP — JEE Main 2026 syllabus-aligned catalog. */
+const pcmChapterCatalog={
+ Physics:["Units & Measurements","Kinematics","Laws of Motion","Work, Energy & Power","Rotational Motion","Gravitation","Properties of Solids and Liquids","Thermodynamics","Kinetic Theory of Gases","Oscillations and Waves","Electrostatics","Current Electricity","Magnetic Effects of Current and Magnetism","Electromagnetic Induction and Alternating Currents","Electromagnetic Waves","Optics","Dual Nature of Matter and Radiation","Atoms and Nuclei","Electronic Devices","Experimental Skills"],
+ Chemistry:["Some Basic Concepts of Chemistry","Atomic Structure","Chemical Bonding","Chemical Thermodynamics","Solutions","Equilibrium","Redox Reactions and Electrochemistry","Chemical Kinetics","Classification of Elements and Periodicity in Properties","p-Block Elements","d- and f-Block Elements","Coordination Compounds","Purification and Characterisation of Organic Compounds","Some Basic Principles of Organic Chemistry","Hydrocarbons","Organic Compounds Containing Halogens","Organic Compounds Containing Oxygen","Aldehydes, Ketones and Carboxylic Acids","Amines","Biomolecules and Polymers","Principles Related to Practical Chemistry"],
+ Mathematics:["Sets, Relations and Functions","Complex Numbers and Quadratic Equations","Matrices and Determinants","Permutations and Combinations","Binomial Theorem","Sequences and Series","Limits, Continuity and Differentiability","Integral Calculus","Differential Equations","Coordinate Geometry","Three Dimensional Geometry","Vector Algebra","Statistics and Probability","Trigonometry"]
+};
+const pcmFoundationFormulas={
+ Physics:{
+  "Rotational Motion":["Torque: τ = rF sinθ","Angular momentum: L = Iω","Rotational kinetic energy: K = ½Iω²"],
+  "Properties of Solids and Liquids":["Stress = force/area","Strain = change in dimension/original dimension","Pressure = force/area"],
+  "Kinetic Theory of Gases":["PV = nRT","Average kinetic energy is proportional to absolute temperature"],
+  "Oscillations and Waves":["SHM: x = A sin(ωt + φ)","Wave speed: v = fλ"],
+  "Electrostatics":["Coulomb force: F = kq₁q₂/r²","Electric field: E = F/q","Potential of point charge: V = kq/r"],
+  "Current Electricity":["V = IR","Electrical power: P = VI = I²R = V²/R"],
+  "Magnetic Effects of Current and Magnetism":["Force on charge: F = qvB sinθ","Force on conductor: F = BIL sinθ"],
+  "Electromagnetic Induction and Alternating Currents":["ε = −dΦ/dt","V_rms = V₀/√2"],
+  "Electromagnetic Waves":["c = fλ","Electromagnetic waves are transverse"],
+  "Optics":["Use the appropriate mirror/lens equation with sign convention","Magnification relates image and object size"],
+  "Dual Nature of Matter and Radiation":["E = hν","de Broglie wavelength: λ = h/p"],
+  "Atoms and Nuclei":["Hydrogen energy levels vary as −1/n²","Binding energy comes from mass defect"],
+  "Electronic Devices":["A diode conducts preferentially in one direction","Logic gates implement Boolean operations"],
+  "Experimental Skills":["Percentage error = absolute error/mean value × 100","Dimensional analysis checks equation consistency"]
+ },
+ Chemistry:{
+  "Solutions":["Molarity = moles of solute/litre of solution","Raoult's law relates vapour pressure to composition"],
+  "Redox Reactions and Electrochemistry":["E°cell = E°cathode − E°anode","Q = It"],
+  "Chemical Kinetics":["Rate = change in concentration/time","For first order: k = (2.303/t) log(a/(a−x))"],
+  "Classification of Elements and Periodicity in Properties":["Atomic size and ionisation enthalpy show periodic trends","Periodic properties depend on electronic configuration"],
+  "p-Block Elements":["Properties depend on group, period and oxidation state","Inert pair effect is important for heavier elements"],
+  "d- and f-Block Elements":["Transition elements show variable oxidation states","Lanthanides commonly show +3 oxidation state"],
+  "Coordination Compounds":["Coordination number counts donor atoms bonded to central metal","Ligands donate electron pairs"],
+  "Purification and Characterisation of Organic Compounds":["Distillation separates liquids using boiling points","Chromatography separates components by differential affinity"],
+  "Some Basic Principles of Organic Chemistry":["Inductive/resonance effects affect stability","A nucleophile donates an electron pair"],
+  "Hydrocarbons":["Alkanes commonly undergo substitution","Alkenes commonly undergo addition"],
+  "Organic Compounds Containing Halogens":["C–X bond polarity affects reactivity","SN1 and SN2 are important substitution pathways"],
+  "Organic Compounds Containing Oxygen":["Alcohols contain −OH","Ethers contain R−O−R"],
+  "Aldehydes, Ketones and Carboxylic Acids":["Aldehydes contain −CHO","Carboxylic acids contain −COOH"],
+  "Amines":["Amines are derivatives of ammonia","Basicity depends on electron availability at nitrogen"],
+  "Biomolecules and Polymers":["Proteins are polymers of amino acids","Addition polymers form without elimination of small molecules"],
+  "Principles Related to Practical Chemistry":["Qualitative analysis identifies ions/functional groups","Titration determines an unknown using a known concentration"]
+ },
+ Mathematics:{
+  "Sets, Relations and Functions":["A∪B combines elements","A∩B contains common elements"],
+  "Complex Numbers and Quadratic Equations":["i² = −1","x = (−b ± √(b²−4ac))/(2a)"],
+  "Matrices and Determinants":["Matrix multiplication needs compatible dimensions","For [[a,b],[c,d]], determinant = ad−bc"],
+  "Permutations and Combinations":["nPr = n!/(n−r)!","nCr = n!/[r!(n−r)!]"],
+  "Binomial Theorem":["(a+b)^n = Σ nCr a^(n−r)b^r","T_(r+1)=nCr a^(n−r)b^r"],
+  "Limits, Continuity and Differentiability":["Continuity at a requires lim(x→a)f(x)=f(a)","Differentiability implies continuity"],
+  "Integral Calculus":["∫x^n dx = x^(n+1)/(n+1)+C for n≠−1","Definite integrals represent signed accumulation"],
+  "Differential Equations":["Order is the highest derivative present","A solution satisfies the equation and conditions"],
+  "Coordinate Geometry":["Distance = √((x₂−x₁)²+(y₂−y₁)²)","Slope = (y₂−y₁)/(x₂−x₁)"],
+  "Three Dimensional Geometry":["3D distance uses all three coordinate differences","Direction ratios describe a line's direction"],
+  "Vector Algebra":["|a| = √(a·a)","a·b = |a||b|cosθ"],
+  "Statistics and Probability":["Mean = sum/number of observations","P(A∪B)=P(A)+P(B)−P(A∩B)"],
+  "Trigonometry":["sin²θ+cos²θ=1","tanθ=sinθ/cosθ"]
+ }
+};
+function makePCMFoundationLesson(subject,topic){
+ const fs=(pcmFoundationFormulas[subject]&&pcmFoundationFormulas[subject][topic])||["Write the key definition and conditions for this chapter","Record the main formulas and standard results","List one common mistake to avoid"];
+ return {title:topic+" — Foundation Lesson",concept:subject+" chapter: "+topic+". This chapter is now mapped in NEXORA's PCM curriculum. The lesson starts with the core idea and routes the student to practice.",formulas:fs,example:"Take one standard problem from this chapter: identify the given data, choose the relevant principle/formula, solve step by step, then verify the result.",practice:[["Write the main definition or principle of "+topic+".","Self-check"],["Write the key formula/result you would use first in a typical "+topic+" problem.","Self-check"]]};
+}
+Object.keys(pcmChapterCatalog).forEach(subject=>{knowledgeBank[subject]=knowledgeBank[subject]||{};pcmChapterCatalog[subject].forEach(topic=>{if(!knowledgeBank[subject][topic])knowledgeBank[subject][topic]=makePCMFoundationLesson(subject,topic);});});
 const lessonBank={
  "physics":{
   "kinematics":{title:"Kinematics — Motion Basics",concept:"Kinematics describes motion using displacement, velocity and acceleration without focusing on its cause.",formulas:["v = u + at","s = ut + ½at²","v² = u² + 2as"],example:"A body starts from rest and accelerates at 2 m/s² for 5 s. v = 0 + 2×5 = 10 m/s.",practice:[["A car starts from rest with a=3 m/s² for 4 s. Find v.","12 m/s"],["If u=5 m/s, a=2 m/s² and t=3 s, find v.","11 m/s"]]},
