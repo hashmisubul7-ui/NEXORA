@@ -23,9 +23,8 @@ jobs:
           import re
           index = Path('index.html')
           lessons = Path('pcm_lessons.js').read_text(encoding='utf-8').strip()
-          # The compact source stores each q field as a line of inner arrays.
-          # Close the outer q array before the topic object's closing brace.
-          lessons = re.sub(r'^(\s*q:\[\[.*\])}(,?)$', r'\1]}\2', lessons, flags=re.MULTILINE)
+          # Close each q outer array: q:[[a,b],[c,d]} -> q:[[a,b],[c,d]]}
+          lessons = re.sub(r'(q:\[\[.*\])}(?=,|\n|$)', r'\1]}', lessons)
           text = index.read_text(encoding='utf-8')
           start = '<!-- NEXORA_PCM_DETAILED_START -->'
           end = '<!-- NEXORA_PCM_DETAILED_END -->'
