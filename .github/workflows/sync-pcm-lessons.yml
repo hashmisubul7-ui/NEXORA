@@ -20,8 +20,12 @@ jobs:
         run: |
           python - <<'PY'
           from pathlib import Path
+          import re
           index = Path('index.html')
           lessons = Path('pcm_lessons.js').read_text(encoding='utf-8').strip()
+          # The compact source stores each q field as a line of inner arrays.
+          # Close the outer q array before the topic object's closing brace.
+          lessons = re.sub(r'^(\s*q:\[\[.*\])}(,?)$', r'\1]}\2', lessons, flags=re.MULTILINE)
           text = index.read_text(encoding='utf-8')
           start = '<!-- NEXORA_PCM_DETAILED_START -->'
           end = '<!-- NEXORA_PCM_DETAILED_END -->'
@@ -49,7 +53,7 @@ jobs:
           Path('/tmp/nexora.js').write_text(js,encoding='utf-8')
           print('index.html bytes:',len(html.encode()))
           print('PCM marker:', '<!-- NEXORA_PCM_DETAILED_START -->' in html)
-          print('PCM chapter references:', js.count('chapter-specific'))
+          print('chapter-specific:', js.count('chapter-specific'))
           PY
           node --check /tmp/nexora.js
 
