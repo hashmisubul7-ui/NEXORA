@@ -5,6 +5,7 @@ on:
     paths:
       - 'pcm_lessons.js'
       - 'competitive_lessons.js'
+      - 'today_engine.js'
       - '.github/workflows/sync-pcm-lessons.yml'
       - 'pcm_sync_trigger.txt'
 
@@ -26,6 +27,7 @@ jobs:
           index = Path('index.html')
           pcm = Path('pcm_lessons.js').read_text(encoding='utf-8').strip()
           comp = Path('competitive_lessons.js').read_text(encoding='utf-8').strip()
+          today = Path('today_engine.js').read_text(encoding='utf-8').strip()
           pcm = re.sub(r'(q:\[\[.*)(?<!\])\]}(?=,|\n|$)', r'\1]]}', pcm)
           text = index.read_text(encoding='utf-8')
           pcm_start = '<!-- NEXORA_PCM_DETAILED_START -->'
@@ -34,19 +36,30 @@ jobs:
           comp_start = '<!-- NEXORA_COMPETITIVE_DETAILED_START -->'
           comp_end = '<!-- NEXORA_COMPETITIVE_DETAILED_END -->'
           comp_block = f'''{comp_start}\n{comp}\n{comp_end}'''
+          today_start = '<!-- NEXORA_TODAY_COURSE_BRIDGE_START -->'
+          today_end = '<!-- NEXORA_TODAY_COURSE_BRIDGE_END -->'
+          today_block = f'''{today_start}\n<script>\n{today}\n</script>\n{today_end}'''
 
           def replace_or_insert(text, start, end, block):
               if start in text and end in text:
                   a = text.index(start)
                   b = text.index(end, a) + len(end)
                   return text[:a] + block + text[b:]
+              return text.replace('</body>', block + '\n</body>', 1)
+
+          def replace_or_insert_course(text, start, end, block):
+              if start in text and end in text:
+                  a = text.index(start)
+                  b = text.index(end, a) + len(end)
+                  return text[:a] + block + text[b:]
               marker = 'const lessonBank={'
               if marker not in text:
-                  raise SystemExit('Injection anchor not found')
+                  raise SystemExit('Course injection anchor not found')
               return text.replace(marker, block + '\n' + marker, 1)
 
-          text = replace_or_insert(text, pcm_start, pcm_end, pcm_block)
-          text = replace_or_insert(text, comp_start, comp_end, comp_block)
+          text = replace_or_insert_course(text, pcm_start, pcm_end, pcm_block)
+          text = replace_or_insert_course(text, comp_start, comp_end, comp_block)
+          text = replace_or_insert(text, today_start, today_end, today_block)
           index.write_text(text, encoding='utf-8')
           PY
 
@@ -62,8 +75,10 @@ jobs:
           print('index.html bytes:',len(html.encode()))
           print('PCM marker:', '<!-- NEXORA_PCM_DETAILED_START -->' in html)
           print('Competitive marker:', '<!-- NEXORA_COMPETITIVE_DETAILED_START -->' in html)
+          print('Today bridge:', '<!-- NEXORA_TODAY_COURSE_BRIDGE_START -->' in html)
           print('Competitive exams:', js.count('competitiveLessonBank'))
           print('Chapter-specific:', js.count('chapter-specific'))
+          print('Competitive bridge:', js.count('nexoraTodayCourseBridge'))
           PY
           node --check /tmp/nexora.js
 
@@ -75,6 +90,6 @@ jobs:
           if git diff --cached --quiet; then
             echo 'No index change needed.'
           else
-            git commit -m 'Build NEXORA with PCM and competitive course layers'
+            git commit -m 'Connect Today to NEXORA course engine'
             git push
           fi
