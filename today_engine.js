@@ -54,6 +54,26 @@
     };
   }
 
+  function makePcmLesson(subject,topic){
+    const bank=window.nexoraPCMContent||{};
+    const subjectBank=bank[subject];
+    if(!subjectBank)return null;
+    const actual=Object.keys(subjectBank).find(t=>key(t)===key(topic))||Object.keys(subjectBank).find(t=>key(t).includes(key(topic))||key(topic).includes(key(t)));
+    const x=actual?subjectBank[actual]:null;
+    if(!x)return null;
+    return {
+      title:actual+' — NEXORA Lesson',
+      concept:x.c,
+      formulas:Array.isArray(x.f)?x.f:[],
+      example:Array.isArray(x.e)?x.e.map((v,i)=>'Worked example '+String.fromCharCode(65+i)+': '+v[0]+' → '+v[1]).join('\n\n'):'',
+      practice:Array.isArray(x.q)?x.q:[],
+      commonMistakes:['Write the given data before choosing a formula.','Check units, signs and conditions.','After solving, substitute the answer back when possible.'],
+      revision:Array.isArray(x.f)?x.f:[],
+      testTopics:[actual],
+      detailLevel:'chapter-specific'
+    };
+  }
+
   const oldLessonForTopic=window.lessonForTopic;
   window.lessonForTopic=function(subject,requestedTopic){
     const p=typeof profile==='function'?profile():null;
@@ -66,6 +86,14 @@
         }
         return l;
       }
+    }
+    const pcm=makePcmLesson(subject,requestedTopic);
+    if(pcm){
+      if(p&&(p.syllabusStatus==='practice_only'||p.syllabusStatus==='complete')){
+        pcm.title+=' — Practice';
+        pcm.concept='Your syllabus is marked complete. This Today session focuses on active recall, application, practice and mistake review instead of restarting the course.\n\n'+pcm.concept;
+      }
+      return pcm;
     }
     return oldLessonForTopic?oldLessonForTopic(subject,requestedTopic):null;
   };
@@ -96,6 +124,8 @@
   }
 
   function safeLesson(subject,topic){
+    const direct=makePcmLesson(subject,topic);
+    if(direct)return direct;
     let l=null;
     try{l=window.lessonForTopic?window.lessonForTopic(subject,topic):null}catch(e){console.warn('NEXORA Today lesson fallback',e)}
     if(l)return l;
@@ -122,7 +152,6 @@
     });
   }
 
-  // Override the old task source so Today, the study modal and completion all use the same safe task objects.
   window.allTasks=function(){return buildTodayTasks();};
 
   window.renderToday=function(){
@@ -141,10 +170,9 @@
     const pct=tasks.length?Math.round(completed/tasks.length*100):0;
     const bar=document.getElementById('todayProgress'),txt=document.getElementById('todayProgressText');
     if(bar)bar.style.width=pct+'%';
-    if(txt)txt.textContent=p.length===0?'Set up your profile to start today.':completed+' of '+tasks.length+' study sessions completed today.';
+    if(txt)txt.textContent=!p?'Set up your profile to start today.':completed+' of '+tasks.length+' study sessions completed today.';
   };
 
-  window.nexoraTodayCourseBridge={activeExam,makeLesson:makeCompetitiveLesson,buildTodayTasks};
-  // Re-render after this bridge is injected so the visible Today page updates immediately.
+  window.nexoraTodayCourseBridge={activeExam,makeLesson:makeCompetitiveLesson,makePcmLesson,buildTodayTasks};
   try{if(document.readyState!=='loading'&&typeof current==='function'&&current())window.renderToday();}catch(e){console.warn('NEXORA Today initial render',e)}
 })();
