@@ -5,6 +5,7 @@ on:
     paths:
       - 'pcm_lessons.js'
       - '.github/workflows/sync-pcm-lessons.yml'
+      - 'pcm_sync_trigger.txt'
 
 permissions:
   contents: write
