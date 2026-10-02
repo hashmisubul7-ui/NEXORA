@@ -1,9 +1,10 @@
-name: Sync PCM lessons
+name: Sync NEXORA course layers
 
 on:
   push:
     paths:
       - 'pcm_lessons.js'
+      - 'competitive_lessons.js'
       - '.github/workflows/sync-pcm-lessons.yml'
       - 'pcm_sync_trigger.txt'
 
@@ -17,33 +18,39 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Inject lesson layer
+      - name: Inject course layers
         run: |
           python - <<'PY'
           from pathlib import Path
           import re
           index = Path('index.html')
-          lessons = Path('pcm_lessons.js').read_text(encoding='utf-8').strip()
-          # Some compact q fields already have the outer ] while a few do not.
-          # Add it only when the final sequence is ... ]} rather than ... ]]}.
-          lessons = re.sub(r'(q:\[\[.*)(?<!\])\]}(?=,|\n|$)', r'\1]]}', lessons)
+          pcm = Path('pcm_lessons.js').read_text(encoding='utf-8').strip()
+          comp = Path('competitive_lessons.js').read_text(encoding='utf-8').strip()
+          pcm = re.sub(r'(q:\[\[.*)(?<!\])\]}(?=,|\n|$)', r'\1]]}', pcm)
           text = index.read_text(encoding='utf-8')
-          start = '<!-- NEXORA_PCM_DETAILED_START -->'
-          end = '<!-- NEXORA_PCM_DETAILED_END -->'
-          block = f'''{start}\n{lessons}\nObject.keys(pcmDetailedBank).forEach(subject => {{\n  knowledgeBank[subject] = knowledgeBank[subject] || {{}};\n  Object.keys(pcmDetailedBank[subject]).forEach(topic => {{\n    const x = pcmDetailedBank[subject][topic];\n    knowledgeBank[subject][topic] = {{\n      title: topic + " — NEXORA Lesson",\n      concept: x.c,\n      formulas: x.f,\n      example: x.e.map((v,i) => "Worked example " + String.fromCharCode(65+i) + ": " + v[0] + " → " + v[1]).join("\\n\\n"),\n      practice: x.q,\n      commonMistakes: ["Write the given data before choosing a formula.", "Check units, signs and conditions.", "After solving, substitute the answer back when possible."],\n      revision: x.f,\n      testTopics: [topic],\n      detailLevel: "chapter-specific"\n    }};\n  }});\n}});\n{end}'''
-          if start in text and end in text:
-              a = text.index(start)
-              b = text.index(end, a) + len(end)
-              text = text[:a] + block + text[b:]
-          else:
+          pcm_start = '<!-- NEXORA_PCM_DETAILED_START -->'
+          pcm_end = '<!-- NEXORA_PCM_DETAILED_END -->'
+          pcm_block = f'''{pcm_start}\n{pcm}\nObject.keys(pcmDetailedBank).forEach(subject => {{\n  knowledgeBank[subject] = knowledgeBank[subject] || {{}};\n  Object.keys(pcmDetailedBank[subject]).forEach(topic => {{\n    const x = pcmDetailedBank[subject][topic];\n    knowledgeBank[subject][topic] = {{\n      title: topic + " — NEXORA Lesson",\n      concept: x.c,\n      formulas: x.f,\n      example: x.e.map((v,i) => "Worked example " + String.fromCharCode(65+i) + ": " + v[0] + " → " + v[1]).join("\\n\\n"),\n      practice: x.q,\n      commonMistakes: ["Write the given data before choosing a formula.", "Check units, signs and conditions.", "After solving, substitute the answer back when possible."],\n      revision: x.f,\n      testTopics: [topic],\n      detailLevel: "chapter-specific"\n    }};\n  }});\n}});\n{pcm_end}'''
+          comp_start = '<!-- NEXORA_COMPETITIVE_DETAILED_START -->'
+          comp_end = '<!-- NEXORA_COMPETITIVE_DETAILED_END -->'
+          comp_block = f'''{comp_start}\n{comp}\n{comp_end}'''
+
+          def replace_or_insert(text, start, end, block):
+              if start in text and end in text:
+                  a = text.index(start)
+                  b = text.index(end, a) + len(end)
+                  return text[:a] + block + text[b:]
               marker = 'const lessonBank={'
               if marker not in text:
                   raise SystemExit('Injection anchor not found')
-              text = text.replace(marker, block + '\n' + marker, 1)
+              return text.replace(marker, block + '\n' + marker, 1)
+
+          text = replace_or_insert(text, pcm_start, pcm_end, pcm_block)
+          text = replace_or_insert(text, comp_start, comp_end, comp_block)
           index.write_text(text, encoding='utf-8')
           PY
 
-      - name: Verify JavaScript syntax
+      - name: Verify JavaScript syntax and course layers
         run: |
           python - <<'PY'
           from pathlib import Path
@@ -54,7 +61,9 @@ jobs:
           Path('/tmp/nexora.js').write_text(js,encoding='utf-8')
           print('index.html bytes:',len(html.encode()))
           print('PCM marker:', '<!-- NEXORA_PCM_DETAILED_START -->' in html)
-          print('chapter-specific:', js.count('chapter-specific'))
+          print('Competitive marker:', '<!-- NEXORA_COMPETITIVE_DETAILED_START -->' in html)
+          print('Competitive exams:', js.count('competitiveLessonBank'))
+          print('Chapter-specific:', js.count('chapter-specific'))
           PY
           node --check /tmp/nexora.js
 
@@ -66,6 +75,6 @@ jobs:
           if git diff --cached --quiet; then
             echo 'No index change needed.'
           else
-            git commit -m 'Build NEXORA with detailed PCM lessons'
+            git commit -m 'Build NEXORA with PCM and competitive course layers'
             git push
           fi
