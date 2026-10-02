@@ -32,7 +32,7 @@ jobs:
           text = index.read_text(encoding='utf-8')
           pcm_start = '<!-- NEXORA_PCM_DETAILED_START -->'
           pcm_end = '<!-- NEXORA_PCM_DETAILED_END -->'
-          pcm_block = f'''{pcm_start}\n{pcm}\nObject.keys(pcmDetailedBank).forEach(subject => {{\n  knowledgeBank[subject] = knowledgeBank[subject] || {{}};\n  Object.keys(pcmDetailedBank[subject]).forEach(topic => {{\n    const x = pcmDetailedBank[subject][topic];\n    knowledgeBank[subject][topic] = {{\n      title: topic + " — NEXORA Lesson",\n      concept: x.c,\n      formulas: x.f,\n      example: x.e.map((v,i) => "Worked example " + String.fromCharCode(65+i) + ": " + v[0] + " → " + v[1]).join("\\n\\n"),\n      practice: x.q,\n      commonMistakes: ["Write the given data before choosing a formula.", "Check units, signs and conditions.", "After solving, substitute the answer back when possible."],\n      revision: x.f,\n      testTopics: [topic],\n      detailLevel: "chapter-specific"\n    }};\n  }});\n}});\n{pcm_end}'''
+          pcm_block = f'''{pcm_start}\n{pcm}\nwindow.nexoraPCMContent = pcmDetailedBank;\nObject.keys(pcmDetailedBank).forEach(subject => {{\n  knowledgeBank[subject] = knowledgeBank[subject] || {{}};\n  Object.keys(pcmDetailedBank[subject]).forEach(topic => {{\n    const x = pcmDetailedBank[subject][topic];\n    knowledgeBank[subject][topic] = {{\n      title: topic + " — NEXORA Lesson",\n      concept: x.c,\n      formulas: x.f,\n      example: x.e.map((v,i) => "Worked example " + String.fromCharCode(65+i) + ": " + v[0] + " → " + v[1]).join("\\n\\n"),\n      practice: x.q,\n      commonMistakes: ["Write the given data before choosing a formula.", "Check units, signs and conditions.", "After solving, substitute the answer back when possible."],\n      revision: x.f,\n      testTopics: [topic],\n      detailLevel: "chapter-specific"\n    }};\n  }});\n}});\n{pcm_end}'''
           comp_start = '<!-- NEXORA_COMPETITIVE_DETAILED_START -->'
           comp_end = '<!-- NEXORA_COMPETITIVE_DETAILED_END -->'
           comp_block = f'''{comp_start}\n{comp}\nwindow.competitiveLessonBank = competitiveLessonBank;\n{comp_end}'''
@@ -76,6 +76,7 @@ jobs:
           print('PCM marker:', '<!-- NEXORA_PCM_DETAILED_START -->' in html)
           print('Competitive marker:', '<!-- NEXORA_COMPETITIVE_DETAILED_START -->' in html)
           print('Today bridge:', '<!-- NEXORA_TODAY_COURSE_BRIDGE_START -->' in html)
+          print('PCM global:', 'window.nexoraPCMContent = pcmDetailedBank;' in js)
           print('Competitive exams:', js.count('competitiveLessonBank'))
           print('Competitive global:', 'window.competitiveLessonBank = competitiveLessonBank;' in js)
           print('Chapter-specific:', js.count('chapter-specific'))
@@ -91,6 +92,6 @@ jobs:
           if git diff --cached --quiet; then
             echo 'No index change needed.'
           else
-            git commit -m 'Connect Today to NEXORA course engine'
+            git commit -m 'Connect Today to real chapter lesson content'
             git push
           fi
