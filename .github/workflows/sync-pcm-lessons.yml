@@ -1,0 +1,66 @@
+name: Sync PCM lessons
+
+on:
+  push:
+    paths:
+      - 'pcm_lessons.js'
+      - '.github/workflows/sync-pcm-lessons.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Inject lesson layer
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          index = Path('index.html')
+          lessons = Path('pcm_lessons.js').read_text(encoding='utf-8').strip()
+          text = index.read_text(encoding='utf-8')
+          start = '<!-- NEXORA_PCM_DETAILED_START -->'
+          end = '<!-- NEXORA_PCM_DETAILED_END -->'
+          block = f'''{start}\n{lessons}\nObject.keys(pcmDetailedBank).forEach(subject => {{\n  knowledgeBank[subject] = knowledgeBank[subject] || {{}};\n  Object.keys(pcmDetailedBank[subject]).forEach(topic => {{\n    const x = pcmDetailedBank[subject][topic];\n    knowledgeBank[subject][topic] = {{\n      title: topic + " — NEXORA Lesson",\n      concept: x.c,\n      formulas: x.f,\n      example: x.e.map((v,i) => "Worked example " + String.fromCharCode(65+i) + ": " + v[0] + " → " + v[1]).join("\\n\\n"),\n      practice: x.q,\n      commonMistakes: ["Write the given data before choosing a formula.", "Check units, signs and conditions.", "After solving, substitute the answer back when possible."],\n      revision: x.f,\n      testTopics: [topic],\n      detailLevel: "chapter-specific"\n    }};\n  }});\n}});\n{end}'''
+          if start in text and end in text:
+              a = text.index(start)
+              b = text.index(end, a) + len(end)
+              text = text[:a] + block + text[b:]
+          else:
+              marker = 'const lessonBank={'
+              if marker not in text:
+                  raise SystemExit('Injection anchor not found')
+              text = text.replace(marker, block + '\n' + marker, 1)
+          index.write_text(text, encoding='utf-8')
+          PY
+
+      - name: Verify JavaScript syntax
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import re
+          html=Path('index.html').read_text(encoding='utf-8')
+          scripts=re.findall(r'<script(?:[^>]*)>(.*?)</script>',html,re.S)
+          js='\n'.join(scripts)
+          Path('/tmp/nexora.js').write_text(js,encoding='utf-8')
+          print('index.html bytes:',len(html.encode()))
+          print('PCM marker:', '<!-- NEXORA_PCM_DETAILED_START -->' in html)
+          print('PCM chapter references:', js.count('chapter-specific'))
+          PY
+          node --check /tmp/nexora.js
+
+      - name: Commit generated index
+        run: |
+          git config user.name 'NEXORA Bot'
+          git config user.email 'actions@users.noreply.github.com'
+          git add index.html
+          if git diff --cached --quiet; then
+            echo 'No index change needed.'
+          else
+            git commit -m 'Build NEXORA with detailed PCM lessons'
+            git push
+          fi
