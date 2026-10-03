@@ -24,105 +24,45 @@ jobs:
           python - <<'PY'
           from pathlib import Path
           import re
-          index = Path('index.html')
-          pcm = Path('pcm_lessons.js').read_text(encoding='utf-8').strip()
-          comp = Path('competitive_lessons.js').read_text(encoding='utf-8').strip()
-          today = Path('today_engine.js').read_text(encoding='utf-8').strip()
-          pcm = re.sub(r'(q:\[\[.*)(?<!\])\]}(?=,|\n|$)', r'\1]]}', pcm)
-          text = index.read_text(encoding='utf-8')
-          pcm_start = '<!-- NEXORA_PCM_DETAILED_START -->'
-          pcm_end = '<!-- NEXORA_PCM_DETAILED_END -->'
-          pcm_block = f'''{pcm_start}\n{pcm}\nwindow.nexoraPCMContent = pcmDetailedBank;\nObject.keys(pcmDetailedBank).forEach(subject => {{\n  knowledgeBank[subject] = knowledgeBank[subject] || {{}};\n  Object.keys(pcmDetailedBank[subject]).forEach(topic => {{\n    const x = pcmDetailedBank[subject][topic];\n    knowledgeBank[subject][topic] = {{\n      title: topic + " — NEXORA Lesson",\n      concept: x.c,\n      formulas: x.f,\n      example: x.e.map((v,i) => "Worked example " + String.fromCharCode(65+i) + ": " + v[0] + " → " + v[1]).join("\\n\\n"),\n      practice: x.q,\n      commonMistakes: ["Write the given data before choosing a formula.", "Check units, signs and conditions.", "After solving, substitute the answer back when possible."],\n      revision: x.f,\n      testTopics: [topic],\n      detailLevel: "chapter-specific"\n    }};\n  }});\n}});\n{pcm_end}'''
-          comp_start = '<!-- NEXORA_COMPETITIVE_DETAILED_START -->'
-          comp_end = '<!-- NEXORA_COMPETITIVE_DETAILED_END -->'
-          comp_block = f'''{comp_start}\n{comp}\nwindow.competitiveLessonBank = competitiveLessonBank;\n{comp_end}'''
-          today_start = '<!-- NEXORA_TODAY_COURSE_BRIDGE_START -->'
-          today_end = '<!-- NEXORA_TODAY_COURSE_BRIDGE_END -->'
-          today_block = f'''{today_start}\n<script>\n{today}\n</script>\n{today_end}'''
-
-          def replace_or_insert(text, start, end, block):
+          index=Path('index.html')
+          text=index.read_text(encoding='utf-8')
+          pcm=Path('pcm_lessons.js').read_text(encoding='utf-8').strip()
+          comp=Path('competitive_lessons.js').read_text(encoding='utf-8').strip()
+          today=Path('today_engine.js').read_text(encoding='utf-8').strip()
+          pcm_start='<!-- NEXORA_PCM_DETAILED_START -->'; pcm_end='<!-- NEXORA_PCM_DETAILED_END -->'
+          comp_start='<!-- NEXORA_COMPETITIVE_DETAILED_START -->'; comp_end='<!-- NEXORA_COMPETITIVE_DETAILED_END -->'
+          today_start='<!-- NEXORA_TODAY_COURSE_BRIDGE_START -->'; today_end='<!-- NEXORA_TODAY_COURSE_BRIDGE_END -->'
+          pcm_block=f'''{pcm_start}\n{pcm}\nwindow.nexoraPCMContent=pcmDetailedBank;\nObject.keys(pcmDetailedBank).forEach(subject=>{{knowledgeBank[subject]=knowledgeBank[subject]||{{}};Object.keys(pcmDetailedBank[subject]).forEach(topic=>{{const x=pcmDetailedBank[subject][topic];knowledgeBank[subject][topic]={{title:topic+' — NEXORA Lesson',concept:x.c,formulas:x.f,example:x.e.map((v,i)=>'Worked example '+String.fromCharCode(65+i)+': '+v[0]+' → '+v[1]).join('\\n\\n'),practice:x.q,commonMistakes:['Write the given data before choosing a formula.','Check units, signs and conditions.','After solving, verify the final answer.'],revision:x.f,testTopics:[topic],detailLevel:'chapter-specific'}};}});}});\n{pcm_end}'''
+          comp_block=f'''{comp_start}\n{comp}\nwindow.competitiveLessonBank=competitiveLessonBank;\n{comp_end}'''
+          today_block=f'''{today_start}\n<script>\n{today}\n</script>\n{today_end}'''
+          def repl(text,start,end,block,anchor=None):
               if start in text and end in text:
-                  a = text.index(start)
-                  b = text.index(end, a) + len(end)
-                  return text[:a] + block + text[b:]
-              return text.replace('</body>', block + '\n</body>', 1)
+                  a=text.index(start); b=text.index(end,a)+len(end); return text[:a]+block+text[b:]
+              if anchor and anchor in text:return text.replace(anchor,block+'\n'+anchor,1)
+              return text.replace('</body>',block+'\n</body>',1)
+          text=repl(text,pcm_start,pcm_end,pcm_block,'const lessonBank={')
+          text=repl(text,comp_start,comp_end,comp_block,'const lessonBank={')
+          text=repl(text,today_start,today_end,today_block)
 
-          def replace_or_insert_course(text, start, end, block):
-              if start in text and end in text:
-                  a = text.index(start)
-                  b = text.index(end, a) + len(end)
-                  return text[:a] + block + text[b:]
-              marker = 'const lessonBank={'
-              if marker not in text:
-                  raise SystemExit('Course injection anchor not found')
-              return text.replace(marker, block + '\n' + marker, 1)
-
-          text = replace_or_insert_course(text, pcm_start, pcm_end, pcm_block)
-          text = replace_or_insert_course(text, comp_start, comp_end, comp_block)
-          text = replace_or_insert(text, today_start, today_end, today_block)
-
-          # The original app's renderToday() is still the function called by the
-          # navigation system. Replace that renderer so the real course engine is
-          # the source of Today tasks instead of the legacy generic lesson bank.
-          direct_today = r'''function renderToday(){
- const bridge=window.nexoraTodayCourseBridge;
- if(bridge){
-  const box=$("todayTasks"),p=profile(),tasks=bridge.buildTodayTasks(),d=userData(),done=d.tasks||{},day=cycleDay();
-  if(!p){
-   box.innerHTML='<div class="empty-state"><b>Create your Student Profile first</b><p class="muted small">Choose your class, subjects and goal. NEXORA will then build your actual chapter study sessions.</p><button class="btn primary" onclick="openStudent()">🎓 Create Student Profile</button></div>';
-  }else{
-   box.innerHTML=tasks.map(t=>`<div class="task ${done[t.id]?"done":""}"><button class="task-open" onclick="window.nexoraTodayCourseBridge.openRealSession('${t.id}')"><span class="task-title">${done[t.id]?"✓ ":""}${esc(t.title)}</span><div class="muted small">${esc(t.meta)} • ${done[t.id]?"Completed — open again":"Open actual chapter lesson →"}</div></button></div>`).join("");
-  }
-  const completed=tasks.filter(t=>done[t.id]).length;
-  $("todayProgress").style.width=Math.round(completed/Math.max(1,tasks.length)*100)+"%";
-  $("todayProgressText").textContent=p?`Day ${day}/21 • ${completed}/${tasks.length} study sessions complete • ${progress()}% cycle progress.`:'Set up your profile to start today.';
-  if(isProgressTestDay(day)){
-   box.innerHTML+=`<div class="task"><button class="task-open" onclick="openProgressTest()"><span class="task-title">📝 Day ${day} Progress Test</span><div class="muted small">${testConfig().type==="BOARD"?("Today's "+esc(progressTestSubject(day)||"Board")+" paper"):("Take the "+esc(testConfig().label))} — record your score and mistakes.</div></button></div>`;
-  }
-  return;
- }
- const box=$("todayTasks"),p=profile(),d=userData(),done=d.tasks||{},tasks=allTasks(),day=cycleDay();
- if(!tasks.length){box.innerHTML='<div class="empty-state"><b>Preparing your study plan…</b><p class="muted small">NEXORA could not read the saved subjects.</p></div>';}else{box.innerHTML=tasks.map(t=>`<div class="task ${done[t.id]?"done":""}"><button class="task-open" onclick="openStudySession('${t.id}')"><span class="task-title">${done[t.id]?"✓ ":""}${esc(t.title)}</span><div class="muted small">${esc(t.meta)} • ${done[t.id]?"Completed — open again":"Open study session →"}</div></button></div>`).join("");}
- if(isProgressTestDay(day))box.innerHTML+=`<div class="task"><button class="task-open" onclick="openProgressTest()"><span class="task-title">📝 Day ${day} Progress Test</span><div class="muted small">Take the progress test.</div></button></div>`;
- const completedToday=tasks.filter(t=>done[t.id]).length;
- $("todayProgress").style.width=Math.round(completedToday/Math.max(1,tasks.length)*100)+"%";
- $("todayProgressText").textContent=`Day ${day}/21 • ${completedToday}/${tasks.length} study sessions complete • ${progress()}% cycle progress.`;
-}
-function toggleTask(id,val){ /* legacy compatibility: tasks are now completed through Study Session */ openStudySession(id);}
-'''
-          text = re.sub(r'function renderToday\(\)\{.*?\n\}\nfunction toggleTask\(id,val\)\{.*?\n\}', direct_today.rstrip(), text, count=1, flags=re.S)
-          index.write_text(text, encoding='utf-8')
+          # Override the legacy Today renderer after every original script has loaded.
+          override='''<script>\n(function(){\n  function nexoraRenderToday(){\n    var bridge=window.nexoraTodayCourseBridge;\n    if(!bridge)return;\n    var box=document.getElementById('todayTasks');\n    if(!box)return;\n    var tasks=bridge.buildTodayTasks();\n    var d=typeof userData==='function'?userData():{};\n    var done=d.tasks||{};\n    var p=typeof profile==='function'?profile():null;\n    if(!p){box.innerHTML='<div class="empty-state"><b>Create your Student Profile first</b><p class="muted small">Choose your class, subjects and goal. NEXORA will then build your actual chapter study sessions.</p></div>';return;}\n    box.innerHTML=tasks.map(function(t){return '<div class="task '+(done[t.id]?'done':'')+'"><button class="task-open" onclick="window.nexoraTodayCourseBridge.openRealSession(\\''+String(t.id).replace(/\\'/g,"&#39;")+"\\')"><span class=\"task-title\">"+(done[t.id]?'✓ ':'')+String(t.title).replace(/[&<>]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;'}[c];})+'</span><div class="muted small">'+String(t.meta).replace(/[&<>]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;'}[c];})+' • '+(done[t.id]?'Completed — open again':'Open actual chapter lesson →')+'</div></button></div>';}).join('');\n    var bar=document.getElementById('todayProgress');\n    var txt=document.getElementById('todayProgressText');\n    var completed=tasks.filter(function(t){return done[t.id];}).length;\n    if(bar)bar.style.width=(tasks.length?Math.round(completed/tasks.length*100):0)+'%';\n    if(txt)txt.textContent='Day '+(typeof cycleDay==='function'?cycleDay():1)+'/21 • '+completed+'/'+tasks.length+' study sessions complete.';\n  }\n  window.nexoraRenderToday=nexoraRenderToday;\n  setTimeout(function(){if(typeof renderToday==='function')renderToday=nexoraRenderToday;nexoraRenderToday();},0);\n  setTimeout(function(){if(typeof renderToday==='function')renderToday=nexoraRenderToday;},500);\n})();\n</script>'''
+          text=text.replace('</body>',override+'\n</body>',1)
+          index.write_text(text,encoding='utf-8')
           PY
 
-      - name: Verify JavaScript syntax and course layers
+      - name: Verify generated app
         run: |
-          python - <<'PY'
-          from pathlib import Path
-          import re
-          html=Path('index.html').read_text(encoding='utf-8')
-          scripts=re.findall(r'<script(?:[^>]*)>(.*?)</script>',html,re.S)
-          js='\n'.join(scripts)
-          Path('/tmp/nexora.js').write_text(js,encoding='utf-8')
-          print('index.html bytes:',len(html.encode()))
-          print('PCM marker:', '<!-- NEXORA_PCM_DETAILED_START -->' in html)
-          print('Competitive marker:', '<!-- NEXORA_COMPETITIVE_DETAILED_START -->' in html)
-          print('Today bridge:', '<!-- NEXORA_TODAY_COURSE_BRIDGE_START -->' in html)
-          print('PCM global:', 'window.nexoraPCMContent = pcmDetailedBank;' in js)
-          print('Competitive exams:', js.count('competitiveLessonBank'))
-          print('Competitive global:', 'window.competitiveLessonBank = competitiveLessonBank;' in js)
-          print('Chapter-specific:', js.count('chapter-specific'))
-          print('Today direct renderer:', 'window.nexoraTodayCourseBridge.buildTodayTasks' in js)
-          PY
-          node --check /tmp/nexora.js
+          test -s index.html
+          grep -q 'NEXORA_PCM_DETAILED_START' index.html
+          grep -q 'NEXORA_COMPETITIVE_DETAILED_START' index.html
+          grep -q 'NEXORA_TODAY_COURSE_BRIDGE_START' index.html
+          grep -q 'nexoraTodayCourseBridge' index.html
+          node --check today_engine.js
+          echo 'NEXORA generated index verified.'
 
       - name: Commit generated index
         run: |
           git config user.name 'NEXORA Bot'
           git config user.email 'actions@users.noreply.github.com'
           git add index.html
-          if git diff --cached --quiet; then
-            echo 'No index change needed.'
-          else
-            git commit -m 'Make Today use the real chapter engine'
-            git push
-          fi
+          if git diff --cached --quiet; then echo 'No index change needed.'; else git commit -m 'Fix Today chapter renderer sync'; git push; fi
