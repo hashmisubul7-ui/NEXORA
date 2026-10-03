@@ -60,6 +60,37 @@ jobs:
           text = replace_or_insert_course(text, pcm_start, pcm_end, pcm_block)
           text = replace_or_insert_course(text, comp_start, comp_end, comp_block)
           text = replace_or_insert(text, today_start, today_end, today_block)
+
+          # The original app's renderToday() is still the function called by the
+          # navigation system. Replace that renderer so the real course engine is
+          # the source of Today tasks instead of the legacy generic lesson bank.
+          direct_today = r'''function renderToday(){
+ const bridge=window.nexoraTodayCourseBridge;
+ if(bridge){
+  const box=$("todayTasks"),p=profile(),tasks=bridge.buildTodayTasks(),d=userData(),done=d.tasks||{},day=cycleDay();
+  if(!p){
+   box.innerHTML='<div class="empty-state"><b>Create your Student Profile first</b><p class="muted small">Choose your class, subjects and goal. NEXORA will then build your actual chapter study sessions.</p><button class="btn primary" onclick="openStudent()">🎓 Create Student Profile</button></div>';
+  }else{
+   box.innerHTML=tasks.map(t=>`<div class="task ${done[t.id]?"done":""}"><button class="task-open" onclick="window.nexoraTodayCourseBridge.openRealSession('${t.id}')"><span class="task-title">${done[t.id]?"✓ ":""}${esc(t.title)}</span><div class="muted small">${esc(t.meta)} • ${done[t.id]?"Completed — open again":"Open actual chapter lesson →"}</div></button></div>`).join("");
+  }
+  const completed=tasks.filter(t=>done[t.id]).length;
+  $("todayProgress").style.width=Math.round(completed/Math.max(1,tasks.length)*100)+"%";
+  $("todayProgressText").textContent=p?`Day ${day}/21 • ${completed}/${tasks.length} study sessions complete • ${progress()}% cycle progress.`:'Set up your profile to start today.';
+  if(isProgressTestDay(day)){
+   box.innerHTML+=`<div class="task"><button class="task-open" onclick="openProgressTest()"><span class="task-title">📝 Day ${day} Progress Test</span><div class="muted small">${testConfig().type==="BOARD"?("Today's "+esc(progressTestSubject(day)||"Board")+" paper"):("Take the "+esc(testConfig().label))} — record your score and mistakes.</div></button></div>`;
+  }
+  return;
+ }
+ const box=$("todayTasks"),p=profile(),d=userData(),done=d.tasks||{},tasks=allTasks(),day=cycleDay();
+ if(!tasks.length){box.innerHTML='<div class="empty-state"><b>Preparing your study plan…</b><p class="muted small">NEXORA could not read the saved subjects.</p></div>';}else{box.innerHTML=tasks.map(t=>`<div class="task ${done[t.id]?"done":""}"><button class="task-open" onclick="openStudySession('${t.id}')"><span class="task-title">${done[t.id]?"✓ ":""}${esc(t.title)}</span><div class="muted small">${esc(t.meta)} • ${done[t.id]?"Completed — open again":"Open study session →"}</div></button></div>`).join("");}
+ if(isProgressTestDay(day))box.innerHTML+=`<div class="task"><button class="task-open" onclick="openProgressTest()"><span class="task-title">📝 Day ${day} Progress Test</span><div class="muted small">Take the progress test.</div></button></div>`;
+ const completedToday=tasks.filter(t=>done[t.id]).length;
+ $("todayProgress").style.width=Math.round(completedToday/Math.max(1,tasks.length)*100)+"%";
+ $("todayProgressText").textContent=`Day ${day}/21 • ${completedToday}/${tasks.length} study sessions complete • ${progress()}% cycle progress.`;
+}
+function toggleTask(id,val){ /* legacy compatibility: tasks are now completed through Study Session */ openStudySession(id);}
+'''
+          text = re.sub(r'function renderToday\(\)\{.*?\n\}\nfunction toggleTask\(id,val\)\{.*?\n\}', direct_today.rstrip(), text, count=1, flags=re.S)
           index.write_text(text, encoding='utf-8')
           PY
 
@@ -80,7 +111,7 @@ jobs:
           print('Competitive exams:', js.count('competitiveLessonBank'))
           print('Competitive global:', 'window.competitiveLessonBank = competitiveLessonBank;' in js)
           print('Chapter-specific:', js.count('chapter-specific'))
-          print('Competitive bridge:', js.count('nexoraTodayCourseBridge'))
+          print('Today direct renderer:', 'window.nexoraTodayCourseBridge.buildTodayTasks' in js)
           PY
           node --check /tmp/nexora.js
 
@@ -92,6 +123,6 @@ jobs:
           if git diff --cached --quiet; then
             echo 'No index change needed.'
           else
-            git commit -m 'Connect Today to real chapter lesson content'
+            git commit -m 'Make Today use the real chapter engine'
             git push
           fi
