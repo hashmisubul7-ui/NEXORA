@@ -43,10 +43,6 @@ jobs:
           text=repl(text,pcm_start,pcm_end,pcm_block,'const lessonBank={')
           text=repl(text,comp_start,comp_end,comp_block,'const lessonBank={')
           text=repl(text,today_start,today_end,today_block)
-
-          # Override the legacy Today renderer after every original script has loaded.
-          override='''<script>\n(function(){\n  function nexoraRenderToday(){\n    var bridge=window.nexoraTodayCourseBridge;\n    if(!bridge)return;\n    var box=document.getElementById('todayTasks');\n    if(!box)return;\n    var tasks=bridge.buildTodayTasks();\n    var d=typeof userData==='function'?userData():{};\n    var done=d.tasks||{};\n    var p=typeof profile==='function'?profile():null;\n    if(!p){box.innerHTML='<div class="empty-state"><b>Create your Student Profile first</b><p class="muted small">Choose your class, subjects and goal. NEXORA will then build your actual chapter study sessions.</p></div>';return;}\n    box.innerHTML=tasks.map(function(t){return '<div class="task '+(done[t.id]?'done':'')+'"><button class="task-open" onclick="window.nexoraTodayCourseBridge.openRealSession(\\''+String(t.id).replace(/\\'/g,"&#39;")+"\\')"><span class=\"task-title\">"+(done[t.id]?'✓ ':'')+String(t.title).replace(/[&<>]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;'}[c];})+'</span><div class="muted small">'+String(t.meta).replace(/[&<>]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;'}[c];})+' • '+(done[t.id]?'Completed — open again':'Open actual chapter lesson →')+'</div></button></div>';}).join('');\n    var bar=document.getElementById('todayProgress');\n    var txt=document.getElementById('todayProgressText');\n    var completed=tasks.filter(function(t){return done[t.id];}).length;\n    if(bar)bar.style.width=(tasks.length?Math.round(completed/tasks.length*100):0)+'%';\n    if(txt)txt.textContent='Day '+(typeof cycleDay==='function'?cycleDay():1)+'/21 • '+completed+'/'+tasks.length+' study sessions complete.';\n  }\n  window.nexoraRenderToday=nexoraRenderToday;\n  setTimeout(function(){if(typeof renderToday==='function')renderToday=nexoraRenderToday;nexoraRenderToday();},0);\n  setTimeout(function(){if(typeof renderToday==='function')renderToday=nexoraRenderToday;},500);\n})();\n</script>'''
-          text=text.replace('</body>',override+'\n</body>',1)
           index.write_text(text,encoding='utf-8')
           PY
 
@@ -58,6 +54,20 @@ jobs:
           grep -q 'NEXORA_TODAY_COURSE_BRIDGE_START' index.html
           grep -q 'nexoraTodayCourseBridge' index.html
           node --check today_engine.js
+          python - <<'PY'
+          from pathlib import Path
+          import re, subprocess, tempfile
+          text=Path('index.html').read_text(encoding='utf-8')
+          scripts=re.findall(r'<script(?:\\s[^>]*)?>(.*?)</script>', text, flags=re.S|re.I)
+          for i,src in enumerate(scripts):
+              p=Path(tempfile.gettempdir())/f'nexora-inline-{i}.js'
+              p.write_text(src,encoding='utf-8')
+              r=subprocess.run(['node','--check',str(p)],capture_output=True,text=True)
+              if r.returncode:
+                  print(r.stderr)
+                  raise SystemExit(r.returncode)
+          print(f'Validated {len(scripts)} inline scripts.')
+          PY
           echo 'NEXORA generated index verified.'
 
       - name: Commit generated index
@@ -65,4 +75,4 @@ jobs:
           git config user.name 'NEXORA Bot'
           git config user.email 'actions@users.noreply.github.com'
           git add index.html
-          if git diff --cached --quiet; then echo 'No index change needed.'; else git commit -m 'Fix Today chapter renderer sync'; git push; fi
+          if git diff --cached --quiet; then echo 'No index change needed.'; else git commit -m 'Fix NEXORA script injection'; git push; fi
