@@ -27,9 +27,10 @@ jobs:
           index=Path('index.html')
           text=index.read_text(encoding='utf-8')
           pcm=Path('pcm_lessons.js').read_text(encoding='utf-8').strip()
-          # Some older chapter records have q:[...] missing the outer closing ].
-          # Repair only that malformed form; leave already-valid q:[[...]] entries untouched.
-          pcm=re.sub(r'(q:\[\[.*?\])(?<!\])\},(?=\n")', r'\1]},', pcm, flags=re.S)
+          # Repair legacy chapter records whose q array is missing its outer closing ].
+          # Valid q:[[...],[...]]}, records are left unchanged because the pattern
+          # requires ]}, immediately after the final inner question pair.
+          pcm=re.sub(r'(q:\[\[.*?\])},(?=\n")', r'\1]},', pcm, flags=re.S)
           comp=Path('competitive_lessons.js').read_text(encoding='utf-8').strip()
           today=Path('today_engine.js').read_text(encoding='utf-8').strip()
           pcm_start='<!-- NEXORA_PCM_DETAILED_START -->'; pcm_end='<!-- NEXORA_PCM_DETAILED_END -->'
@@ -61,7 +62,7 @@ jobs:
           from pathlib import Path
           import re, subprocess, tempfile
           text=Path('index.html').read_text(encoding='utf-8')
-          scripts=re.findall(r'<script(?:\\s[^>]*)?>(.*?)</script>', text, flags=re.S|re.I)
+          scripts=re.findall(r'<script(?:\s[^>]*)?>(.*?)</script>', text, flags=re.S|re.I)
           for i,src in enumerate(scripts):
               p=Path(tempfile.gettempdir())/f'nexora-inline-{i}.js'
               p.write_text(src,encoding='utf-8')
