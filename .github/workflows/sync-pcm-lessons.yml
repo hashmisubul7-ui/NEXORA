@@ -27,12 +27,11 @@ jobs:
           index=Path('index.html')
           text=index.read_text(encoding='utf-8')
           pcm=Path('pcm_lessons.js').read_text(encoding='utf-8').strip()
-          # Some legacy chapter records have q:[[...],[...]] missing the OUTER ]
-          # immediately before the chapter object's closing }. Repair only that
-          # line-local form; already-valid q:[[...],[...]]}, entries stay unchanged.
+          # Repair legacy chapter records that have one extra ] at the end of q.
+          # Valid q:[[...],[...]], entries are left unchanged.
           fixed=[]
           for line in pcm.splitlines():
-              line=re.sub(r'(q:\[\[.*\])},\s*$', r'\1]},', line)
+              line=re.sub(r'(q:\[\[.*)\]\]},\s*$', r'\1]]},', line)
               fixed.append(line)
           pcm='\n'.join(fixed)
           comp=Path('competitive_lessons.js').read_text(encoding='utf-8').strip()
