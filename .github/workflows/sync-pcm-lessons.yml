@@ -27,10 +27,14 @@ jobs:
           index=Path('index.html')
           text=index.read_text(encoding='utf-8')
           pcm=Path('pcm_lessons.js').read_text(encoding='utf-8').strip()
-          # Repair legacy chapter records whose q array is missing its outer closing ].
-          # Valid q:[[...],[...]]}, records are left unchanged because the pattern
-          # requires ]}, immediately after the final inner question pair.
-          pcm=re.sub(r'(q:\[\[.*?\])},(?=\n")', r'\1]},', pcm, flags=re.S)
+          # Some legacy chapter records have q:[[...],[...]] missing the OUTER ]
+          # immediately before the chapter object's closing }. Repair only that
+          # line-local form; already-valid q:[[...],[...]]}, entries stay unchanged.
+          fixed=[]
+          for line in pcm.splitlines():
+              line=re.sub(r'(q:\[\[.*\])},\s*$', r'\1]},', line)
+              fixed.append(line)
+          pcm='\n'.join(fixed)
           comp=Path('competitive_lessons.js').read_text(encoding='utf-8').strip()
           today=Path('today_engine.js').read_text(encoding='utf-8').strip()
           pcm_start='<!-- NEXORA_PCM_DETAILED_START -->'; pcm_end='<!-- NEXORA_PCM_DETAILED_END -->'
