@@ -1,1 +1,2 @@
-sync-final-today-renderer-2026-10-03
+Force NEXORA course sync after PCM syntax repair.
+2026-10-06
