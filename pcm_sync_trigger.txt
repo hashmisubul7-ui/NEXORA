@@ -1,2 +1,2 @@
-Force NEXORA course sync after PCM syntax repair.
-2026-10-06
+Force NEXORA course sync after Chemistry q-array repair.
+2026-10-06 2
