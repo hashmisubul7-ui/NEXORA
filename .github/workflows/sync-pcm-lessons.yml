@@ -27,10 +27,10 @@ jobs:
           index=Path('index.html')
           text=index.read_text(encoding='utf-8')
           pcm=Path('pcm_lessons.js').read_text(encoding='utf-8').strip()
-          # Repair legacy chapter records that have one extra ] at the end of q.
-          # Valid q:[[...],[...]], entries are left unchanged.
+          # Normalize malformed legacy q-array/object endings before injection.
           fixed=[]
           for line in pcm.splitlines():
+              line=line.replace(']]}},',']]},')
               line=re.sub(r'(q:\[\[.*)\]\]},\s*$', r'\1]]},', line)
               fixed.append(line)
           pcm='\n'.join(fixed)
