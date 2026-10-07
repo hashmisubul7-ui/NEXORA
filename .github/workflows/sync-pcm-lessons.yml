@@ -30,8 +30,59 @@ jobs:
           # Normalize malformed legacy q-array/object endings before injection.
           fixed=[]
           for line in pcm.splitlines():
-              line=line.replace(']]}},',']]},')
-              line=re.sub(r'(q:\[\[.*)\]\]},\s*$', r'\1]]},', line)
+              line=re.sub(r'(q:\[.*)\}\},\s*
+              fixed.append(line)
+          pcm='\n'.join(fixed)
+          comp=Path('competitive_lessons.js').read_text(encoding='utf-8').strip()
+          today=Path('today_engine.js').read_text(encoding='utf-8').strip()
+          pcm_start='<!-- NEXORA_PCM_DETAILED_START -->'; pcm_end='<!-- NEXORA_PCM_DETAILED_END -->'
+          comp_start='<!-- NEXORA_COMPETITIVE_DETAILED_START -->'; comp_end='<!-- NEXORA_COMPETITIVE_DETAILED_END -->'
+          today_start='<!-- NEXORA_TODAY_COURSE_BRIDGE_START -->'; today_end='<!-- NEXORA_TODAY_COURSE_BRIDGE_END -->'
+          pcm_block=f'''{pcm_start}\n{pcm}\nwindow.nexoraPCMContent=pcmDetailedBank;\nObject.keys(pcmDetailedBank).forEach(subject=>{{knowledgeBank[subject]=knowledgeBank[subject]||{{}};Object.keys(pcmDetailedBank[subject]).forEach(topic=>{{const x=pcmDetailedBank[subject][topic];knowledgeBank[subject][topic]={{title:topic+' — NEXORA Lesson',concept:x.c,formulas:x.f,example:x.e.map((v,i)=>'Worked example '+String.fromCharCode(65+i)+': '+v[0]+' → '+v[1]).join('\\n\\n'),practice:x.q,commonMistakes:['Write the given data before choosing a formula.','Check units, signs and conditions.','After solving, verify the final answer.'],revision:x.f,testTopics:[topic],detailLevel:'chapter-specific'}};}});}});\n{pcm_end}'''
+          comp_block=f'''{comp_start}\n{comp}\nwindow.competitiveLessonBank=competitiveLessonBank;\n{comp_end}'''
+          today_block=f'''{today_start}\n<script>\n{today}\n</script>\n{today_end}'''
+          def repl(text,start,end,block,anchor=None):
+              if start in text and end in text:
+                  a=text.index(start); b=text.index(end,a)+len(end); return text[:a]+block+text[b:]
+              if anchor and anchor in text:return text.replace(anchor,block+'\n'+anchor,1)
+              return text.replace('</body>',block+'\n</body>',1)
+          text=repl(text,pcm_start,pcm_end,pcm_block,'const lessonBank={')
+          text=repl(text,comp_start,comp_end,comp_block,'const lessonBank={')
+          text=repl(text,today_start,today_end,today_block)
+          index.write_text(text,encoding='utf-8')
+          PY
+
+      - name: Verify generated app
+        run: |
+          test -s index.html
+          grep -q 'NEXORA_PCM_DETAILED_START' index.html
+          grep -q 'NEXORA_COMPETITIVE_DETAILED_START' index.html
+          grep -q 'NEXORA_TODAY_COURSE_BRIDGE_START' index.html
+          grep -q 'nexoraTodayCourseBridge' index.html
+          node --check today_engine.js
+          python - <<'PY'
+          from pathlib import Path
+          import re, subprocess, tempfile
+          text=Path('index.html').read_text(encoding='utf-8')
+          scripts=re.findall(r'<script(?:\s[^>]*)?>(.*?)</script>', text, flags=re.S|re.I)
+          for i,src in enumerate(scripts):
+              p=Path(tempfile.gettempdir())/f'nexora-inline-{i}.js'
+              p.write_text(src,encoding='utf-8')
+              r=subprocess.run(['node','--check',str(p)],capture_output=True,text=True)
+              if r.returncode:
+                  print(r.stderr)
+                  raise SystemExit(r.returncode)
+          print(f'Validated {len(scripts)} inline scripts.')
+          PY
+          echo 'NEXORA generated index verified.'
+
+      - name: Commit generated index
+        run: |
+          git config user.name 'NEXORA Bot'
+          git config user.email 'actions@users.noreply.github.com'
+          git add index.html
+          if git diff --cached --quiet; then echo 'No index change needed.'; else git commit -m 'Fix NEXORA script injection'; git push; fi
+, r'\1},', line)
               fixed.append(line)
           pcm='\n'.join(fixed)
           comp=Path('competitive_lessons.js').read_text(encoding='utf-8').strip()
