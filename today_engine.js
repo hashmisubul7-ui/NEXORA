@@ -4,7 +4,7 @@
 (function(){
   'use strict';
 
-  const key=s=>String(s||'').toLowerCase().replace(/[^a-z0-9]+/g,' ').trim();
+  const key=s=>String(s||'').toLowerCase().replace(/\band\b/g,' ').replace(/[^a-z0-9]+/g,' ').trim();
   const pcm=()=>window.nexoraPCMContent||{};
   const getProfile=()=>{try{return typeof profile==='function'?profile():null}catch(e){return null}};
   const getData=()=>{try{return typeof userData==='function'?userData():{}}catch(e){return {}}};
@@ -34,7 +34,9 @@
   function pcmLesson(subject,topic){
     const bank=pcm()[subject];
     if(!bank)return null;
-    const actual=Object.keys(bank).find(t=>key(t)===key(topic))||Object.keys(bank).find(t=>key(t).includes(key(topic))||key(topic).includes(key(t)));
+    const aliases={Physics:{"Newton's Laws":"Laws of Motion"},Chemistry:{"Thermodynamics":"Chemical Thermodynamics"}};
+    const canonical=(aliases[subject]&&aliases[subject][String(topic)])||topic;
+    const actual=Object.keys(bank).find(t=>key(t)===key(canonical))||Object.keys(bank).find(t=>key(t).includes(key(canonical))||key(canonical).includes(key(t)));
     if(!actual)return null;
     const x=bank[actual];
     return {
@@ -78,7 +80,8 @@
 
   function lesson(subject,topic){
     const p=getProfile();
-    let l=competitiveLesson(subject,topic)||pcmLesson(subject,topic);
+    // Prefer the full chapter-specific PCM lesson when available; use exam scaffolding for other subjects/topics.
+    let l=pcmLesson(subject,topic)||competitiveLesson(subject,topic);
     if(!l){
       try{l=typeof lessonForTopic==='function'?lessonForTopic(subject,topic):null}catch(e){}
     }
