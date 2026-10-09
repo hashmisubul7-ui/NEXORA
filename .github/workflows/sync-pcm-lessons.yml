@@ -27,7 +27,7 @@ jobs:
           index=Path('index.html')
           text=index.read_text(encoding='utf-8')
           # Remove the obsolete Today override that contains malformed JavaScript.
-          text, removed = re.subn(r'<script>\\s*\\(function\\(\\)\\{\\s*function nexoraRenderToday\\(\\)\\{.*?</script>\\s*', '', text, count=1, flags=re.S)
+          text, removed = re.subn(r'<script>\s*\(function\(\)\{\s*function nexoraRenderToday\(\)\{.*?</script>\s*', '', text, count=1, flags=re.S)
           print(f'Removed obsolete Today override: {removed}')
           pcm=Path('pcm_lessons.js').read_text(encoding='utf-8').strip()
           comp=Path('competitive_lessons.js').read_text(encoding='utf-8').strip()
