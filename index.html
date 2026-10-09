@@ -1037,7 +1037,7 @@ function checkPractice(i){
 function completeStudyTask(){
  const t=window._activeTask;if(!t)return;
  const inputs=t.lesson.practice||[];
- const unchecked=inputs.map((_,i)=>$("practiceResult_"+i)?.textContent||"").filter(x=>!x.startsWith("✓ Correct"));
+ const unchecked=inputs.map((_,i)=>$("practiceResult_"+i)?.textContent||"").filter(x=>!x.startsWith("✓ Correct")&&!x.startsWith("✓ Response recorded"));
  if(inputs.length&&unchecked.length){
    toast("Check every practice question before completing this session.");
    return;
