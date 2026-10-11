@@ -62,3 +62,6 @@ Mathematics:{
 "Trigonometry":{c:"Trigonometry relates angles and ratios and provides identities useful in equations, geometry and calculus.",f:["sin²θ+cos²θ=1","tanθ=sinθ/cosθ","sin(A±B)=sinA cosB±cosA sinB"],e:[["sin²30°+cos²30°?","1"],["tan45°?","1"]],q:[["sin90°?","1"],["cos0°?","1"],["tan0°?","0"],["sin²θ+cos²θ?","1"]]}
 }
 };
+
+// Expose the chapter bank to the Today lesson renderer.
+window.nexoraPCMContent = pcmDetailedBank;
