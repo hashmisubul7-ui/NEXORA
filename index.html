@@ -798,6 +798,9 @@ Mathematics:{
 "Trigonometry":{c:"Trigonometry relates angles and ratios and provides identities useful in equations, geometry and calculus.",f:["sin²θ+cos²θ=1","tanθ=sinθ/cosθ","sin(A±B)=sinA cosB±cosA sinB"],e:[["sin²30°+cos²30°?","1"],["tan45°?","1"]],q:[["sin90°?","1"],["cos0°?","1"],["tan0°?","0"],["sin²θ+cos²θ?","1"]]}
 }
 };
+
+// Expose the chapter bank to the Today lesson renderer.
+window.nexoraPCMContent = pcmDetailedBank;
 window.nexoraPCMContent=pcmDetailedBank;
 Object.keys(pcmDetailedBank).forEach(subject=>{knowledgeBank[subject]=knowledgeBank[subject]||{};Object.keys(pcmDetailedBank[subject]).forEach(topic=>{const x=pcmDetailedBank[subject][topic];knowledgeBank[subject][topic]={title:topic+' — NEXORA Lesson',concept:x.c,formulas:x.f,example:x.e.map((v,i)=>'Worked example '+String.fromCharCode(65+i)+': '+v[0]+' → '+v[1]).join('\n\n'),practice:x.q,commonMistakes:['Write the given data before choosing a formula.','Check units, signs and conditions.','After solving, verify the final answer.'],revision:x.f,testTopics:[topic],detailLevel:'chapter-specific'};});});
 <!-- NEXORA_PCM_DETAILED_END -->
