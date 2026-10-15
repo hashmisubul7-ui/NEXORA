@@ -1600,9 +1600,36 @@ window.addEventListener("click",e=>{if(e.target.classList.contains("modal"))e.ta
 
   function topicFor(subject,day){
     const p=getProfile();
-    const same=String(p&&p.currentSubject||'').toLowerCase()===String(subject||'').toLowerCase();
-    if(same&&p.currentTopic&&Number(day)===1)return String(p.currentTopic);
-    try{if(typeof roadmapTopicFor==='function'){const t=roadmapTopicFor(subject,day);if(t)return String(t)}}catch(e){}
+    const subjectName=({math:'Mathematics',maths:'Mathematics',mathematics:'Mathematics',physics:'Physics',chemistry:'Chemistry'})[key(subject)]||subject;
+    const bank=pcm()[subjectName];
+    const matchBankTopic=value=>{
+      if(!bank||!value)return null;
+      const wanted=key(value);
+      const names=Object.keys(bank);
+      return names.find(t=>key(t)===wanted)
+        ||names.find(t=>key(t).includes(wanted)||wanted.includes(key(t)))
+        ||null;
+    };
+    const same=key(p&&p.currentSubject)===key(subject);
+    if(same&&p.currentTopic&&Number(day)===1){
+      const current=String(p.currentTopic);
+      if(!bank)return current;
+      const matched=matchBankTopic(current);
+      if(matched)return matched;
+    }
+    let roadmap='';
+    try{if(typeof roadmapTopicFor==='function'){const t=roadmapTopicFor(subject,day);if(t)roadmap=String(t)}}catch(e){}
+    if(roadmap){
+      if(!bank)return roadmap;
+      const matched=matchBankTopic(roadmap);
+      if(matched)return matched;
+    }
+    // For supported PCM subjects, always select a chapter that actually exists
+    // in the built-in lesson bank instead of showing an empty placeholder lesson.
+    if(bank){
+      const chapters=Object.keys(bank);
+      return chapters[(Math.max(1,Number(day)||1)-1)%chapters.length];
+    }
     const list=fallbackTopics[subject]||['Core Concepts','Practice & Application','Revision'];
     return list[(Math.max(1,Number(day)||1)-1)%list.length];
   }
