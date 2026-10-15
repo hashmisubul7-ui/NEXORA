@@ -1722,7 +1722,9 @@ window.addEventListener("click",e=>{if(e.target.classList.contains("modal"))e.ta
     // Old builds could mark a task complete without recording a real study session.
     // Clear those stale completion flags so students are not shown a false "done" state.
     const recordedSessions=new Set((d.sessions||[]).map(x=>x&&x.id).filter(Boolean));
-    tasks.forEach(t=>{if(done[t.id]&&!recordedSessions.has(t.id))delete done[t.id]});
+    let clearedStaleCompletion=false;
+    tasks.forEach(t=>{if(done[t.id]&&!recordedSessions.has(t.id)){delete done[t.id];clearedStaleCompletion=true}});
+    if(clearedStaleCompletion){try{if(typeof saveState==='function')saveState()}catch(e){}}
     if(!p){
       box.innerHTML='<div class="empty-state"><b>Create your Student Profile first</b><p class="muted small">Choose your class, subjects and goal. NEXORA will then build your actual study sessions.</p><button class="btn primary" onclick="openStudent()">🎓 Create Student Profile</button></div>';
     }else{
