@@ -1608,11 +1608,18 @@ window.addEventListener("click",e=>{if(e.target.classList.contains("modal"))e.ta
   }
 
   function pcmLesson(subject,topic){
-    const bank=pcm()[subject];
+    const subjectName=({math:"Mathematics",maths:"Mathematics",mathematics:"Mathematics",physics:"Physics",chemistry:"Chemistry"})[key(subject)]||subject;
+    const bank=pcm()[subjectName];
     if(!bank)return null;
-    const aliases={Physics:{"Newton's Laws":"Laws of Motion"},Chemistry:{"Thermodynamics":"Chemical Thermodynamics"}};
-    const canonical=(aliases[subject]&&aliases[subject][String(topic)])||topic;
-    const actual=Object.keys(bank).find(t=>key(t)===key(canonical))||Object.keys(bank).find(t=>key(t).includes(key(canonical))||key(canonical).includes(key(t)));
+    const topicAliases={
+      Physics:{"Newton's Laws":"Laws of Motion","Newton's Laws of Motion":"Laws of Motion","Motion in a Straight Line":"Kinematics","Motion in a Plane":"Kinematics","Units and Measurements":"Units & Measurements","Work Energy and Power":"Work, Energy & Power"},
+      Chemistry:{"Thermodynamics":"Chemical Thermodynamics","Some Basic Concepts in Chemistry":"Some Basic Concepts of Chemistry","Structure of Atom":"Atomic Structure","Chemical Equilibrium":"Equilibrium"},
+      Mathematics:{"Trigonometric Functions":"Trigonometry","Sets":"Sets, Relations and Functions","Relations and Functions":"Sets, Relations and Functions"}
+    };
+    const aliases=topicAliases[subjectName]||{};
+    const canonical=aliases[String(topic)]||topic;
+    const canonicalKey=key(canonical);
+    const actual=Object.keys(bank).find(t=>key(t)===canonicalKey)||Object.keys(bank).find(t=>key(t).includes(canonicalKey)||canonicalKey.includes(key(t)));
     if(!actual)return null;
     const x=bank[actual];
     return {
@@ -1661,7 +1668,17 @@ window.addEventListener("click",e=>{if(e.target.classList.contains("modal"))e.ta
     if(!l){
       try{l=typeof lessonForTopic==='function'?lessonForTopic(subject,topic):null}catch(e){}
     }
-    if(!l)l={title:topic+' — NEXORA Lesson',concept:'No built-in lesson is available for this topic yet.',formulas:[],example:'Use your current study material for this topic.',practice:[],commonMistakes:[],revision:[],testTopics:[topic]};
+    if(!l)l={
+      title:topic+' — Guided Study Session',
+      concept:'This topic does not yet have a verified chapter-specific lesson in the built-in content bank.\n\nStudy it actively: (1) write the definition or main principle, (2) identify the conditions where it applies, (3) note every symbol and unit if a formula is involved, and (4) work through one example from your course material. Do not treat this outline as a substitute for the missing chapter notes.',
+      formulas:['Formula card: copy the exact formula from your course material.','For each symbol, write its meaning and SI unit.','Check the formula dimensions and the conditions under which it applies.'],
+      example:'Worked-example task: write the given values → identify the required quantity → choose the relevant rule from your course notes → substitute values with units → check the answer.',
+      practice:[['Write the key definition or principle for '+topic+'.','self-check'],['Write one formula or rule used in '+topic+' and explain each symbol.','self-check'],['Solve one representative question from your current course material on '+topic+'.','self-check'],['Write one common mistake to avoid in '+topic+'.','self-check']],
+      commonMistakes:['Do not memorise a formula without understanding its symbols and conditions.','Keep units consistent during calculations.','Check whether your result is reasonable.'],
+      revision:['Recall the definition without looking at notes.','Reproduce the relevant formula and explain every symbol.','Review the example and correct any mistakes.'],
+      testTopics:[topic],
+      detailLevel:'guided-outline-not-full-chapter-content'
+    };
     if(p&&(p.syllabusStatus==='complete'||p.syllabusStatus==='practice_only')){
       l=Object.assign({},l,{title:l.title+' — Practice',concept:'Your syllabus is marked complete. This session focuses on active recall, application, practice and mistake review.\n\n'+l.concept});
     }
@@ -1702,6 +1719,10 @@ window.addEventListener("click",e=>{if(e.target.classList.contains("modal"))e.ta
     const p=getProfile();
     const tasks=refreshTaskMap();
     const d=getData(),done=d.tasks||{};
+    // Old builds could mark a task complete without recording a real study session.
+    // Clear those stale completion flags so students are not shown a false "done" state.
+    const recordedSessions=new Set((d.sessions||[]).map(x=>x&&x.id).filter(Boolean));
+    tasks.forEach(t=>{if(done[t.id]&&!recordedSessions.has(t.id))delete done[t.id]});
     if(!p){
       box.innerHTML='<div class="empty-state"><b>Create your Student Profile first</b><p class="muted small">Choose your class, subjects and goal. NEXORA will then build your actual study sessions.</p><button class="btn primary" onclick="openStudent()">🎓 Create Student Profile</button></div>';
     }else{
@@ -1721,7 +1742,7 @@ window.addEventListener("click",e=>{if(e.target.classList.contains("modal"))e.ta
     const l=t.lesson||{};
     title.textContent=t.title;
     meta.textContent='Day '+dayNow()+' • '+t.meta;
-    const formulas=(l.formulas||[]).map(x=>'<div>• '+esc(x)+'</div>').join('')||'<div class="muted">No formula list for this topic.</div>';
+    const formulas=(l.formulas||[]).map(x=>'<div style="padding:7px 0;border-bottom:1px solid var(--border)">• '+esc(x)+'</div>').join('')||'<div class="muted">This topic has no formula list in the built-in bank yet. Check your chapter notes and record the exact formula and symbol meanings here.</div>';
     const examples=esc(l.example||'No worked example available.').replace(/\n/g,'<br>');
     const practice=(l.practice||[]).map((x,i)=>'<div class="practice-q"><b>'+(i+1)+'. '+esc(x[0])+'</b><input id="practice_'+i+'" placeholder="Write your answer"><button class="btn" style="margin-top:7px" onclick="checkPractice('+i+')">Check</button><div id="practiceResult_'+i+'" class="muted small" style="margin-top:6px"></div></div>').join('');
     body.innerHTML='<div class="lesson-block"><h3>1. Learn / Concept</h3><p>'+esc(l.concept||'')+'</p></div><div class="lesson-block"><h3>2. Key points & formulas</h3>'+formulas+'</div><div class="lesson-block"><h3>3. Worked examples</h3><p>'+examples+'</p></div><div class="lesson-block"><h3>4. Practice</h3>'+practice+'</div><div class="lesson-block"><h3>5. Quick revision</h3>'+((l.revision||[]).map(x=>'<div>• '+esc(x)+'</div>').join('')||'<div class="muted">Review the formulas and mistakes above.</div>')+'</div><div class="notice">Finish the lesson and check every practice question before completing the session. This completion is what advances Today progress.</div><div class="session-actions"><button class="btn primary" onclick="completeStudyTask()">✓ Complete study session</button><button class="btn" onclick="setTimer('+Math.min(180,Math.max(10,t.minutes||25))+')">⏱ Start focus timer</button></div>';
