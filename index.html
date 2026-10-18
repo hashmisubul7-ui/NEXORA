@@ -1285,29 +1285,51 @@ const bank={
  "mole concept":[["Particles in one mole?","6.022×10²³","Avogadro constant"],["Moles in 18 g water if molar mass is 18 g/mol?","1 mol","n=mass/molar mass"],["Molar mass of CO₂?","44 g/mol","12+2×16"]]
 };
 function generateQuestions(){
- const topic=$("qTopic").value.trim(),sub=$("qSubject").value.trim()||"the subject",count=Number($("qCount").value);if(!topic){toast("Enter a topic first.");return}
- const key=Object.keys(bank).find(k=>topic.toLowerCase().includes(k)||k.includes(topic.toLowerCase()));
- let qs=key?bank[key].map(x=>({q:x[0],a:x[1],e:x[2]})):[];
+ const topicEl=$("qTopic"),subjectEl=$("qSubject"),countEl=$("qCount"),statusEl=$("qStatus"),outputEl=$("questions");
+ if(!topicEl||!countEl||!statusEl||!outputEl){toast("Question Lab could not load. Refresh the page and try again.");return}
+ const topic=topicEl.value.trim(),sub=(subjectEl&&subjectEl.value.trim())||"the subject",count=Math.max(1,Math.min(15,Number(countEl.value)||10));
+ if(!topic){statusEl.textContent="Enter a topic first, for example Kinematics or Sets, Relations and Functions.";toast("Enter a topic first.");topicEl.focus();return}
+ const norm=x=>String(x||"").toLowerCase().replace(/[^a-z0-9]+/g," ").trim();
+ const wanted=norm(topic);
+ const matched=Object.keys(bank).find(k=>norm(k)===wanted)
+   ||Object.keys(bank).find(k=>wanted.includes(norm(k))&&norm(k).length>=5)
+   ||Object.keys(bank).find(k=>norm(k).includes(wanted)&&wanted.length>=5);
+ let qs=matched?(bank[matched]||[]).map(x=>({q:x[0],a:x[1],e:x[2]||"Built-in practice question."})):[];
+ // If the topic exists in the chapter-specific PCM bank, use its actual questions.
+ if(!qs.length){
+   try{
+    const subjectsBank=window.nexoraPCMContent||{};
+    const chosen=Object.keys(subjectsBank).find(k=>norm(k)===norm(sub));
+    const chapters=chosen?subjectsBank[chosen]:{};
+    const chapter=Object.keys(chapters).find(k=>norm(k)===wanted);
+    const item=chapter&&chapters[chapter];
+    if(item&&Array.isArray(item.q))qs=item.q.map(x=>({q:x[0],a:x[1],e:"Chapter-specific NEXORA practice question."}));
+   }catch(e){}
+ }
  if(!qs.length){
    const prompts=[
-    `Define ${topic} and state its most important formula, law or property.`,
-    `Explain the main idea of ${topic} in 2–3 lines and give one example.`,
-    `Write one common mistake students make while studying ${topic}.`,
-    `Create a short ${sub} practice problem based on ${topic} and list the steps needed to solve it.`,
-    `What prerequisite concept is important before studying ${topic}? Explain briefly.`,
-    `Give one real-life application of ${topic}.`,
-    `Compare two closely related ideas inside ${topic}.`,
-    `Write a one-line revision question about ${topic} and its answer.`,
-    `What diagram or graph could help explain ${topic}?`,
-    `Write a test-style question on ${topic}.`
+    [`Define ${topic} and state its key rule or property.`,"Write a correct definition and one key property from your course material."],
+    [`Apply one important rule from ${topic} to a simple example.`,"Show the rule, substitute the given values or facts, and state the result."],
+    [`What is one common misconception about ${topic}?`,"State the misconception and correct it using your notes."],
+    [`Create and solve a basic ${sub} problem on ${topic}.`,"Write a complete question and solve it step by step."],
+    [`Which prerequisite idea is needed for ${topic}, and why?`,"Name the prerequisite and explain the connection."],
+    [`Give one application of ${topic} and explain the reasoning.`,"Give a relevant application and explain how the concept is used."],
+    [`Compare two key terms or cases in ${topic}.`,"State at least one clear difference and an example."],
+    [`Write a short exam-style question testing the main idea of ${topic}.`,"Answer it using the definition or rule, with reasoning."],
+    [`What diagram, graph, or representation can explain ${topic}?`,"Draw or describe it and explain what each part means."],
+    [`Write a challenge question combining two ideas from ${topic}.`,"Show the steps and verify the final answer."]
    ];
-   qs=prompts.map(q=>({q,a:"Use your textbook/class notes to verify this practice prompt.",e:"Generated practice prompt — not a verified PYQ."}));
+   qs=prompts.map(([q,a])=>({q,a,e:"Self-study prompt; check the reasoning against your course notes. Not a verified PYQ."}));
  }
- while(qs.length<count)qs=qs.concat(qs.slice(0,Math.min(count-qs.length,qs.length)));
- qs=qs.slice(0,count).sort(()=>Math.random()-.5);
- $("qStatus").textContent=key?"Practice set from NEXORA's built-in topic bank.":"Generated practice set. Not verified PYQs.";
- $("questions").innerHTML=qs.map((x,i)=>`<div class="question"><b>${i+1}. ${esc(x.q)}</b><button class="btn" onclick="this.nextElementSibling.classList.toggle('hidden')">Show answer</button><div class="answer hidden"><b>Answer:</b> ${esc(x.a)}<br><span class="muted">${esc(x.e)}</span></div></div>`).join("");
- updateUserData(d=>{d.questions=qs;return d});
+ const pool=qs.slice();
+ while(qs.length<count&&pool.length)qs=qs.concat(pool.slice(0,Math.min(count-qs.length,pool.length)));
+ qs=qs.slice(0,count);
+ // Deterministic Fisher–Yates shuffle (avoids sort comparator randomness).
+ for(let i=qs.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[qs[i],qs[j]]=[qs[j],qs[i]]}
+ statusEl.textContent=matched?"Practice questions loaded from NEXORA's built-in topic bank.":(qs.some(x=>String(x.e||"").includes("Self-study prompt"))?"Generated self-study prompts. They are not verified PYQs.":"Chapter-specific practice questions loaded.");
+ outputEl.innerHTML=qs.map((x,i)=>`<div class="question"><b>${i+1}. ${esc(x.q)}</b><button class="btn" type="button" onclick="this.nextElementSibling.classList.toggle('hidden')">Show answer / guidance</button><div class="answer hidden"><b>Answer / guidance:</b> ${esc(x.a)}<br><span class="muted">${esc(x.e)}</span></div></div>`).join("");
+ if(!outputEl.innerHTML){statusEl.textContent="No questions could be generated. Please try another topic.";return}
+ try{updateUserData(d=>{d.questions=qs;return d})}catch(e){}
 }
 
 function boardSubjectAt(index){
@@ -1759,8 +1781,21 @@ window.addEventListener("click",e=>{if(e.target.classList.contains("modal"))e.ta
 
   function lesson(subject,topic){
     const p=getProfile();
-    // Prefer a validated chapter lesson; use exam scaffolding only when no PCM lesson exists.
-    let l=pcmLesson(subject,topic)||competitiveLesson(subject,topic);
+    // Resolve the exact chapter from the original expanded knowledgeBank first.
+    // It is the source already used by the rest of NEXORA and avoids bank-shape
+    // mismatches between compact PCM entries and expanded lesson objects.
+    let l=null;
+    try{
+      const subjectName=({math:'Mathematics',maths:'Mathematics',mathematics:'Mathematics',physics:'Physics',chemistry:'Chemistry'})[key(subject)]||subject;
+      const kb=(typeof knowledgeBank!=='undefined'&&knowledgeBank[subjectName])||{};
+      const wanted=key(topic);
+      const matched=Object.keys(kb).find(t=>key(t)===wanted);
+      if(matched){
+        const x=kb[matched];
+        if(x&&x.concept&&Array.isArray(x.practice)&&x.practice.length)l=Object.assign({},x,{title:x.title||matched+' — NEXORA Lesson',testTopics:[matched],detailLevel:'chapter-specific'});
+      }
+    }catch(e){}
+    if(!l)l=pcmLesson(subject,topic)||competitiveLesson(subject,topic);
     if(!l){
       try{l=typeof lessonForTopic==='function'?lessonForTopic(subject,topic):null}catch(e){}
     }
