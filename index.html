@@ -94,9 +94,23 @@ label.field>span{display:block;margin:0 0 7px}
 }
 
 /* NEXORA study-session engine */
-.study-modal{position:fixed;inset:0;background:rgba(0,0,0,.55);display:none;align-items:flex-start;justify-content:center;padding:20px;z-index:9999;overflow:auto}
+.study-modal{position:fixed;inset:0;background:rgba(3,5,12,.94);display:none;align-items:flex-start;justify-content:center;padding:12px;z-index:99999;overflow-y:auto;overscroll-behavior:contain;box-sizing:border-box}
 .study-modal.open{display:flex}
-.study-modal-box{width:min(760px,100%);background:var(--card);color:var(--text);border-radius:20px;padding:22px;box-shadow:0 20px 60px rgba(0,0,0,.3);margin:20px auto}
+.study-modal-box{box-sizing:border-box;width:min(760px,100%);max-height:calc(100dvh - 24px);overflow-y:auto;overscroll-behavior:contain;background:#0b0d14;color:#f5f6ff;border:1px solid #343746;border-radius:20px;padding:22px;box-shadow:0 20px 60px rgba(0,0,0,.7);margin:0 auto}
+.study-modal-box .muted{color:#b8bdcf}
+.study-modal-box .lesson-block,.study-modal-box .practice-q{background:#10131d;border-color:#343746}
+.study-modal-box input{box-sizing:border-box;max-width:100%;background:#171b27;color:#fff;border:1px solid #343746;border-radius:14px;padding:13px 14px}
+.study-modal-box .session-actions .btn{max-width:100%;white-space:normal}
+@media(max-width:560px){
+ .study-modal{padding:7px}
+ .study-modal-box{max-height:calc(100dvh - 14px);padding:14px;border-radius:16px;margin:0 auto}
+ .study-modal-head{gap:8px}
+ .study-modal-head h2{font-size:21px;line-height:1.25}
+ .lesson-block{padding:11px;margin-top:9px}
+ .practice-q{padding:11px}
+ .session-actions{display:grid;grid-template-columns:1fr}
+ .session-actions .btn{width:100%;box-sizing:border-box}
+}
 .study-modal-head{display:flex;justify-content:space-between;gap:12px;align-items:flex-start}
 .lesson-block{padding:14px;border:1px solid var(--border);border-radius:14px;margin-top:12px}
 .practice-q{padding:14px;border:1px solid var(--border);border-radius:14px;margin-top:10px}
@@ -1617,7 +1631,13 @@ window.addEventListener("click",e=>{if(e.target.classList.contains("modal"))e.ta
   'use strict';
 
   const key=s=>String(s||'').toLowerCase().replace(/\band\b/g,' ').replace(/[^a-z0-9]+/g,' ').trim();
-  const pcm=()=>window.nexoraPCMContent||{};
+  // Prefer the exposed bank, but also read the page's top-level lexical bank when
+  // available. This avoids falling through to generic outlines if exposure fails.
+  const pcm=()=>{
+    try{if(window.nexoraPCMContent&&Object.keys(window.nexoraPCMContent).length)return window.nexoraPCMContent}catch(e){}
+    try{if(typeof pcmDetailedBank!=='undefined'&&pcmDetailedBank)return pcmDetailedBank}catch(e){}
+    return {};
+  };
   const getProfile=()=>{try{return typeof profile==='function'?profile():null}catch(e){return null}};
   const getData=()=>{try{return typeof userData==='function'?userData():{}}catch(e){return {}}};
   const dayNow=()=>{try{return typeof cycleDay==='function'?cycleDay():1}catch(e){return 1}};
@@ -1682,9 +1702,13 @@ window.addEventListener("click",e=>{if(e.target.classList.contains("modal"))e.ta
     const aliases=topicAliases[subjectName]||{};
     const canonical=aliases[String(topic)]||topic;
     const canonicalKey=key(canonical);
-    const actual=Object.keys(bank).find(t=>key(t)===canonicalKey)||Object.keys(bank).find(t=>key(t).includes(canonicalKey)||canonicalKey.includes(key(t)));
+    let actual=Object.keys(bank).find(t=>key(t)===canonicalKey);
+    // Only allow fuzzy matching when the shorter key is substantial; this keeps
+    // short topics like "Sets" from accidentally matching an unrelated chapter.
+    if(!actual&&canonicalKey.length>=10)actual=Object.keys(bank).find(t=>key(t).includes(canonicalKey)||canonicalKey.includes(key(t)));
     if(!actual)return null;
     const x=bank[actual];
+    if(!x||!x.c||!Array.isArray(x.q)||!x.q.length)return null;
     return {
       title:actual+' — NEXORA Lesson',
       concept:x.c||'',
@@ -1726,7 +1750,7 @@ window.addEventListener("click",e=>{if(e.target.classList.contains("modal"))e.ta
 
   function lesson(subject,topic){
     const p=getProfile();
-    // Prefer the full chapter-specific PCM lesson when available; use exam scaffolding for other subjects/topics.
+    // Prefer a validated chapter lesson; use exam scaffolding only when no PCM lesson exists.
     let l=pcmLesson(subject,topic)||competitiveLesson(subject,topic);
     if(!l){
       try{l=typeof lessonForTopic==='function'?lessonForTopic(subject,topic):null}catch(e){}
@@ -1809,7 +1833,7 @@ window.addEventListener("click",e=>{if(e.target.classList.contains("modal"))e.ta
     meta.textContent='Day '+dayNow()+' • '+t.meta;
     const formulas=(l.formulas||[]).map(x=>'<div style="padding:7px 0;border-bottom:1px solid var(--border)">• '+esc(x)+'</div>').join('')||'<div class="muted">This topic has no formula list in the built-in bank yet. Check your chapter notes and record the exact formula and symbol meanings here.</div>';
     const examples=esc(l.example||'No worked example available.').replace(/\n/g,'<br>');
-    const practice=(l.practice||[]).map((x,i)=>'<div class="practice-q"><b>'+(i+1)+'. '+esc(x[0])+'</b><input id="practice_'+i+'" placeholder="Write your answer"><button class="btn" style="margin-top:7px" onclick="checkPractice('+i+')">Check</button><div id="practiceResult_'+i+'" class="muted small" style="margin-top:6px"></div></div>').join('');
+    const practice=(l.practice||[]).map((x,i)=>'<div class="practice-q"><b>'+(i+1)+'. '+esc(x[0])+'</b><input id="practice_'+i+'" type="text" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="Write your answer"><button class="btn" style="margin-top:7px" onclick="checkPractice('+i+')">Check</button><div id="practiceResult_'+i+'" class="muted small" style="margin-top:6px"></div></div>').join('');
     body.innerHTML='<div class="lesson-block"><h3>1. Learn / Concept</h3><p>'+esc(l.concept||'')+'</p></div><div class="lesson-block"><h3>2. Key points & formulas</h3>'+formulas+'</div><div class="lesson-block"><h3>3. Worked examples</h3><p>'+examples+'</p></div><div class="lesson-block"><h3>4. Practice</h3>'+practice+'</div><div class="lesson-block"><h3>5. Quick revision</h3>'+((l.revision||[]).map(x=>'<div>• '+esc(x)+'</div>').join('')||'<div class="muted">Review the formulas and mistakes above.</div>')+'</div><div class="notice">Finish the lesson and check every practice question before completing the session. This completion is what advances Today progress.</div><div class="session-actions"><button class="btn primary" onclick="completeStudyTask()">✓ Complete study session</button><button class="btn" onclick="setTimer('+Math.min(180,Math.max(10,t.minutes||25))+')">⏱ Start focus timer</button></div>';
     modal.classList.add('open');
   }
