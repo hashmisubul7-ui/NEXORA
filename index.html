@@ -1636,6 +1636,8 @@ window.addEventListener("click",e=>{if(e.target.classList.contains("modal"))e.ta
   const pcm=()=>{
     try{if(window.nexoraPCMContent&&Object.keys(window.nexoraPCMContent).length)return window.nexoraPCMContent}catch(e){}
     try{if(typeof pcmDetailedBank!=='undefined'&&pcmDetailedBank)return pcmDetailedBank}catch(e){}
+    // knowledgeBank is populated from the same PCM bank earlier in index.html.
+    try{if(typeof knowledgeBank!=='undefined'&&knowledgeBank)return knowledgeBank}catch(e){}
     return {};
   };
   const getProfile=()=>{try{return typeof profile==='function'?profile():null}catch(e){return null}};
@@ -1708,15 +1710,22 @@ window.addEventListener("click",e=>{if(e.target.classList.contains("modal"))e.ta
     if(!actual&&canonicalKey.length>=10)actual=Object.keys(bank).find(t=>key(t).includes(canonicalKey)||canonicalKey.includes(key(t)));
     if(!actual)return null;
     const x=bank[actual];
-    if(!x||!x.c||!Array.isArray(x.q)||!x.q.length)return null;
+    if(!x)return null;
+    // Support both the compact PCM bank shape (c/f/e/q) and knowledgeBank's
+    // expanded shape (concept/formulas/example/practice).
+    const concept=x.c||x.concept||'';
+    const formulas=Array.isArray(x.f)?x.f:(Array.isArray(x.formulas)?x.formulas:[]);
+    const examples=Array.isArray(x.e)?x.e.map((v,i)=>'Worked example '+String.fromCharCode(65+i)+': '+v[0]+' → '+v[1]).join('\n\n'):(x.example||'');
+    const practice=Array.isArray(x.q)?x.q:(Array.isArray(x.practice)?x.practice:[]);
+    if(!concept||!practice.length)return null;
     return {
       title:actual+' — NEXORA Lesson',
-      concept:x.c||'',
-      formulas:Array.isArray(x.f)?x.f:[],
-      example:Array.isArray(x.e)?x.e.map((v,i)=>'Worked example '+String.fromCharCode(65+i)+': '+v[0]+' → '+v[1]).join('\n\n'):'',
-      practice:Array.isArray(x.q)?x.q:[],
-      commonMistakes:['Write the given data before choosing a formula.','Check units, signs and conditions.','After solving, verify the final answer.'],
-      revision:Array.isArray(x.f)?x.f:[],
+      concept,
+      formulas,
+      example:examples,
+      practice,
+      commonMistakes:x.commonMistakes||['Write the given data before choosing a formula.','Check units, signs and conditions.','After solving, verify the final answer.'],
+      revision:Array.isArray(x.revision)?x.revision:formulas,
       testTopics:[actual],
       detailLevel:'chapter-specific'
     };
