@@ -1332,10 +1332,23 @@ function generateQuestions(){
  try{updateUserData(d=>{d.questions=qs;return d})}catch(e){}
 }
 window.generateQuestions=generateQuestions;
-document.addEventListener("DOMContentLoaded",()=>{
- const btn=$("generateQuestionsBtn");
- if(btn&&!btn.dataset.bound){btn.dataset.bound="1";btn.addEventListener("click",()=>{try{window.generateQuestions()}catch(err){const status=$("qStatus");if(status)status.textContent="Generator error: "+(err&&err.message?err.message:"please refresh and try again");console.error("NEXORA question generator",err)}})}
-});
+// Delegated click handling is attached immediately, so it still works if this
+// script executes after DOMContentLoaded or the Question Lab is re-rendered.
+document.addEventListener("click",function(e){
+ const btn=e.target&&e.target.closest?e.target.closest("#generateQuestionsBtn"):null;
+ if(!btn)return;
+ e.preventDefault();
+ try{
+  if(typeof window.generateQuestions!=="function")throw new Error("Question generator did not initialise. Reload NEXORA and try again.");
+  window.generateQuestions();
+ }catch(err){
+  const status=document.getElementById("qStatus");
+  const output=document.getElementById("questions");
+  if(status)status.textContent="Question generator error: "+(err&&err.message?err.message:"unknown error");
+  if(output)output.innerHTML="";
+  console.error("NEXORA question generator",err);
+ }
+},true);
 
 function boardSubjectAt(index){
  const ss=subjects();return ss.length?ss[Math.max(0,Number(index)||0)%ss.length]:"Selected Subject";
@@ -1890,6 +1903,24 @@ window.addEventListener("click",e=>{if(e.target.classList.contains("modal"))e.ta
   document.addEventListener('click',function(e){
     const btn=e.target.closest('[data-nexora-task]');
     if(btn){e.preventDefault();e.stopPropagation();openRealSession(btn.getAttribute('data-nexora-task'));}
+  },true);
+
+  // Keep Question Lab responsive even if the main script's DOM-ready binding
+  // was missed. Capture phase ensures the button is handled before other UI code.
+  document.addEventListener('click',function(e){
+    const btn=e.target&&e.target.closest?e.target.closest('#generateQuestionsBtn'):null;
+    if(!btn)return;
+    e.preventDefault();
+    try{
+      if(typeof window.generateQuestions!=='function')throw new Error('Question generator did not initialise. Reload NEXORA and try again.');
+      window.generateQuestions();
+    }catch(err){
+      const status=document.getElementById('qStatus');
+      const output=document.getElementById('questions');
+      if(status)status.textContent='Question generator error: '+(err&&err.message?err.message:'unknown error');
+      if(output)output.innerHTML='';
+      console.error('NEXORA question generator',err);
+    }
   },true);
 
   let busy=false;
