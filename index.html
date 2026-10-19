@@ -1905,23 +1905,6 @@ window.addEventListener("click",e=>{if(e.target.classList.contains("modal"))e.ta
     if(btn){e.preventDefault();e.stopPropagation();openRealSession(btn.getAttribute('data-nexora-task'));}
   },true);
 
-  // Keep Question Lab responsive even if the main script's DOM-ready binding
-  // was missed. Capture phase ensures the button is handled before other UI code.
-  document.addEventListener('click',function(e){
-    const btn=e.target&&e.target.closest?e.target.closest('#generateQuestionsBtn'):null;
-    if(!btn)return;
-    e.preventDefault();
-    try{
-      if(typeof window.generateQuestions!=='function')throw new Error('Question generator did not initialise. Reload NEXORA and try again.');
-      window.generateQuestions();
-    }catch(err){
-      const status=document.getElementById('qStatus');
-      const output=document.getElementById('questions');
-      if(status)status.textContent='Question generator error: '+(err&&err.message?err.message:'unknown error');
-      if(output)output.innerHTML='';
-      console.error('NEXORA question generator',err);
-    }
-  },true);
 
   let busy=false;
   function sync(){if(busy)return;busy=true;try{renderTasks()}finally{setTimeout(()=>busy=false,0)}}
