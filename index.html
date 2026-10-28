@@ -1878,7 +1878,7 @@ window.addEventListener("click",e=>{if(e.target.classList.contains("modal"))e.ta
     if(!p){
       box.innerHTML='<div class="empty-state"><b>Create your Student Profile first</b><p class="muted small">Choose your class, subjects and goal. NEXORA will then build your actual study sessions.</p><button class="btn primary" onclick="openStudent()">🎓 Create Student Profile</button></div>';
     }else{
-      box.innerHTML=tasks.map(t=>'<div class="task '+(done[t.id]?'done':'')+'"><button class="task-open" data-nexora-task="'+esc(t.id)+'"><span class="task-title">'+(done[t.id]?'✓ ':'')+esc(t.title)+'</span><div class="muted small">'+esc(t.meta)+' • '+(done[t.id]?'Completed — open again':'Open actual lesson →')+'</div></button></div>').join('');
+      box.innerHTML=tasks.map(t=>'<div class="task '+(done[t.id]?'done':'')+'"><button type="button" class="task-open" data-nexora-task="'+esc(t.id)+'" onclick="if(window.nexoraTodayCourseBridge)window.nexoraTodayCourseBridge.openRealSession(this.getAttribute(\'data-nexora-task\'))"><span class="task-title">'+(done[t.id]?'✓ ':'')+esc(t.title)+'</span><div class="muted small">'+esc(t.meta)+' • '+(done[t.id]?'Completed — open again':'Open actual lesson →')+'</div></button></div>').join('');
     }
     const completed=tasks.filter(t=>done[t.id]).length;
     const bar=document.getElementById('todayProgress'),txt=document.getElementById('todayProgressText');
@@ -1904,12 +1904,6 @@ window.addEventListener("click",e=>{if(e.target.classList.contains("modal"))e.ta
 
   // Back-button failsafe: handle the tap at document capture level, independent
   // of inline handlers or later bubbling listeners.
-  document.addEventListener('click',function(e){
-    const btn=e.target.closest('[data-nexora-task]');
-    if(btn){e.preventDefault();e.stopPropagation();openRealSession(btn.getAttribute('data-nexora-task'));}
-  },true);
-
-
   let busy=false;
   function sync(){if(busy)return;busy=true;try{renderTasks()}finally{setTimeout(()=>busy=false,0)}}
 
