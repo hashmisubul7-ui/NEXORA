@@ -75,4 +75,38 @@ for (const [topic, subject, count] of [["Kinematics", "Physics", 5], ["Quadratic
   assert.equal((mock.questions.innerHTML.match(/class="question"/g) || []).length, count, topic + " should render requested question count");
   assert.ok(mock.qStatus.textContent.length, topic + " should report result");
 }
-console.log("NEXORA regression checks passed: script syntax, PCM lesson bank, Today lesson resolution, and Question Lab generation.");
+
+const clickHandlerStart = html.indexOf('document.addEventListener("click",function(e){\\n const btn=e.target&&e.target.closest?e.target.closest("#generateQuestionsBtn"):null;');
+const clickHandlerEnd = html.indexOf('},true);', clickHandlerStart) + 7;
+assert.ok(clickHandlerStart > 0 && clickHandlerEnd > clickHandlerStart, "Question Lab click handler must exist");
+const clickHandlerSource = html.slice(clickHandlerStart, clickHandlerEnd);
+const clickMock = {
+  qTopic: { value: "Kinematics", focus() {} },
+  qSubject: { value: "Physics" },
+  qCount: { value: "5" },
+  qLevel: { value: "JEE Main" },
+  qStatus: { textContent: "" },
+  questions: { innerHTML: "" }
+};
+const clickWindow = { nexoraPCMContent: pcmBank };
+const clickHandlers = [];
+const clickDocument = {
+  getElementById: id => clickMock[id] || null,
+  addEventListener: (name, fn) => { if (name === "click") clickHandlers.push(fn); }
+};
+const clickSource = "const $ = id => clickMock[id] || null;\\n" +
+  "const esc = s => String(s ?? \"\").replace(/[&<>]/g, c => ({\"&\":\"&amp;\",\"<\":\"&lt;\",\">\":\"&gt;\"}[c]));\\n" +
+  "const toast = x => { clickWindow.__toast = x; };\\nconst updateUserData = fn => { clickWindow.__saved = fn({}); };\\n" +
+  smallBankSource + "\\n" + generatorSource + "\\nwindow.generateQuestions = generateQuestions;\\n" + clickHandlerSource + "\\nreturn window.generateQuestions;";
+new Function("window", "document", "Math", "clickMock", "clickWindow", "clickHandlers", clickSource)(
+  clickWindow, clickDocument, Math, clickMock, clickWindow, clickHandlers
+);
+assert.equal(clickHandlers.length, 1, "Question Lab should register one delegated click handler");
+clickHandlers[0]({
+  target: { closest: selector => selector === "#generateQuestionsBtn" ? {} : null },
+  preventDefault() {}
+});
+assert.equal((clickMock.questions.innerHTML.match(/class="question"/g) || []).length, 5, "Clicking Generate Questions should render questions");
+assert.ok(clickMock.qStatus.textContent.length, "Clicking Generate Questions should update status");
+
+console.log("NEXORA regression checks passed: script syntax, PCM lesson bank, Today lesson resolution, and Question Lab click and generation.");
