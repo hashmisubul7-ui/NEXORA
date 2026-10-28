@@ -1073,7 +1073,7 @@ function openStudySession(taskId){
   <div class="lesson-block"><h3>4. Practice</h3>${l.practice.map((x,i)=>`<div class="practice-q"><b>${i+1}. ${esc(x[0])}</b><input id="practice_${i}" placeholder="Write your answer"><button class="btn" style="margin-top:7px" onclick="checkPractice(${i})">Check</button><div id="practiceResult_${i}" class="muted small" style="margin-top:6px"></div></div>`).join("")}</div>
   <div class="notice" style="margin-top:12px">Finish the lesson and practice before completing the task. NEXORA will record this session in your progress.</div>
   <div class="session-actions"><button class="btn primary" onclick="completeStudyTask()">✓ Complete study session</button><button class="btn" onclick="setTimer(${Math.min(180,Math.max(10,task.minutes||25))})">⏱ Start focus timer</button></div>`;
- const modal=$("studySessionModal");modal.style.display="flex";modal.setAttribute("aria-hidden","false");modal.classList.add("open");modal.scrollTop=0;const box=modal.querySelector(".study-modal-box");if(box)box.scrollTop=0;
+ const modal=$("studySessionModal");modal.style.removeProperty("display");modal.style.removeProperty("display");modal.style.display="flex";modal.setAttribute("aria-hidden","false");modal.classList.add("open");modal.scrollTop=0;const box=modal.querySelector(".study-modal-box");if(box)box.scrollTop=0;
 }
 function normalizeAnswer(s){return String(s||"").toLowerCase().replace(/[−–—]/g,"-").replace(/,/g,"").replace(/\s+/g," ").trim()}
 function checkPractice(i){
@@ -1891,7 +1891,7 @@ window.addEventListener("click",e=>{if(e.target.classList.contains("modal"))e.ta
     window._activeTask=t;
     const title=document.getElementById('sessionTitle'),meta=document.getElementById('sessionMeta'),body=document.getElementById('sessionBody'),modal=document.getElementById('studySessionModal');
     if(!title||!meta||!body||!modal)return;
-    modal.setAttribute("aria-hidden","false");modal.scrollTop=0;const modalBox=modal.querySelector(".study-modal-box");if(modalBox)modalBox.scrollTop=0;
+    modal.style.removeProperty("display");modal.style.display="flex";modal.setAttribute("aria-hidden","false");modal.classList.add("open");modal.scrollTop=0;const modalBox=modal.querySelector(".study-modal-box");if(modalBox)modalBox.scrollTop=0;
     const l=t.lesson||{};
     title.textContent=t.title;
     meta.textContent='Day '+dayNow()+' • '+t.meta;
