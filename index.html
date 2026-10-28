@@ -111,7 +111,7 @@ label.field>span{display:block;margin:0 0 7px}
  .session-actions{display:grid;grid-template-columns:1fr}
  .session-actions .btn{width:100%;box-sizing:border-box}
 }
-.study-modal-head{display:flex;justify-content:space-between;gap:12px;align-items:flex-start}
+.study-modal-head{position:sticky;top:0;z-index:5;background:#0b0d14;padding:8px 0;display:flex;justify-content:space-between;gap:12px;align-items:flex-start}
 .lesson-block{padding:14px;border:1px solid var(--border);border-radius:14px;margin-top:12px}
 .practice-q{padding:14px;border:1px solid var(--border);border-radius:14px;margin-top:10px}
 .practice-q input{margin-top:8px;width:100%}
@@ -198,7 +198,7 @@ label.field>span{display:block;margin:0 0 7px}
   <div class="study-card card"><h3>⏱️ Focus Timer</h3><div id="timer" class="timer">25:00</div><div class="preset"><button class="btn" onclick="setTimer(25)">25m</button><button class="btn" onclick="setTimer(60)">1h</button><button class="btn" onclick="setTimer(120)">2h</button><button class="btn" onclick="setTimer(240)">4h</button><button class="btn" onclick="setTimer(480)">8h</button><button class="btn" onclick="setTimer(1440)">24h</button></div><div style="display:grid;grid-template-columns:1fr auto;gap:8px"><input id="customTimer" type="number" min="5" max="1440" placeholder="5–1440 minutes"><button class="btn" onclick="setCustomTimer()">Set</button></div><div class="timer-controls" style="margin-top:10px"><button class="btn primary" onclick="startTimer()">▶ Start</button><button class="btn" onclick="pauseTimer()">⏸ Pause</button><button class="btn" onclick="resetTimer()">↻ Reset</button></div></div>
   <div class="study-card card"><h3>📷 Ask a Doubt</h3><textarea id="doubtText" placeholder="Type your doubt..."></textarea><label class="btn" style="display:block;text-align:center;margin-top:8px">📷 Add question photo<input id="doubtPhoto" type="file" accept="image/*" capture="environment" hidden onchange="previewPhoto()"></label><img id="doubtPreview" class="hidden" style="max-width:100%;max-height:220px;border-radius:12px;margin-top:10px"><button class="btn primary" style="margin-top:10px;width:100%" onclick="saveDoubt()">Save Doubt</button><div id="doubts" style="margin-top:12px"></div></div>
   <div class="study-card card"><h3>📝 Study Notes</h3><textarea id="studyNote" placeholder="What did you learn? Mistakes to revise? Questions for later?"></textarea><button class="btn primary" style="margin-top:10px" onclick="saveNote()">Save Note</button><div id="notes" style="margin-top:12px"></div></div>
-  <div class="study-card card"><h3>📚 Question / PYQ Lab</h3><p class="muted small">Enter a topic. Known topics use built-in practice questions; other topics receive clearly-labelled practice prompts. They are not claimed as verified PYQs.</p><div class="form-grid"><label class="field"><span>Subject</span><input id="qSubject" placeholder="Physics"></label><label class="field"><span>Topic</span><input id="qTopic" placeholder="Newton's Laws"></label><label class="field"><span>Level</span><select id="qLevel"><option>Class level</option><option>School exam</option><option>JEE Main</option><option>JEE Advanced</option></select></label><label class="field"><span>Questions</span><select id="qCount"><option>5</option><option selected>10</option><option>15</option></select></label></div><button id="generateQuestionsBtn" class="btn primary" type="button" style="width:100%">Generate Questions</button><div id="qStatus" class="muted small" style="margin-top:10px"></div><div id="questions" class="question-box"></div></div>
+  <div class="study-card card"><h3>📚 Question / PYQ Lab</h3><p class="muted small">Enter a topic. Known topics use built-in practice questions; other topics receive clearly-labelled practice prompts. They are not claimed as verified PYQs.</p><div class="form-grid"><label class="field"><span>Subject</span><input id="qSubject" placeholder="Physics"></label><label class="field"><span>Topic</span><input id="qTopic" placeholder="Newton's Laws"></label><label class="field"><span>Level</span><select id="qLevel"><option>Class level</option><option>School exam</option><option>JEE Main</option><option>JEE Advanced</option></select></label><label class="field"><span>Questions</span><select id="qCount"><option>5</option><option selected>10</option><option>15</option></select></label></div><button id="generateQuestionsBtn" class="btn primary" type="button" style="width:100%" onclick="if(this.dataset.nexoraClickHandled==='1'){delete this.dataset.nexoraClickHandled;return false} if(window.generateQuestions){window.generateQuestions()}else{document.getElementById('qStatus').textContent='Question generator did not load. Refresh the page and try again.'} return false;">Generate Questions</button><div id="qStatus" class="muted small" style="margin-top:10px"></div><div id="questions" class="question-box"></div></div>
  </div>
 </section>
 
@@ -1073,7 +1073,7 @@ function openStudySession(taskId){
   <div class="lesson-block"><h3>4. Practice</h3>${l.practice.map((x,i)=>`<div class="practice-q"><b>${i+1}. ${esc(x[0])}</b><input id="practice_${i}" placeholder="Write your answer"><button class="btn" style="margin-top:7px" onclick="checkPractice(${i})">Check</button><div id="practiceResult_${i}" class="muted small" style="margin-top:6px"></div></div>`).join("")}</div>
   <div class="notice" style="margin-top:12px">Finish the lesson and practice before completing the task. NEXORA will record this session in your progress.</div>
   <div class="session-actions"><button class="btn primary" onclick="completeStudyTask()">✓ Complete study session</button><button class="btn" onclick="setTimer(${Math.min(180,Math.max(10,task.minutes||25))})">⏱ Start focus timer</button></div>`;
- $("studySessionModal").classList.add("open");
+ const modal=$("studySessionModal");modal.setAttribute("aria-hidden","false");modal.classList.add("open");modal.scrollTop=0;const box=modal.querySelector(".study-modal-box");if(box)box.scrollTop=0;
 }
 function normalizeAnswer(s){return String(s||"").toLowerCase().replace(/[−–—]/g,"-").replace(/,/g,"").replace(/\s+/g," ").trim()}
 function checkPractice(i){
@@ -1115,7 +1115,7 @@ function completeStudyTask(){
  }
  renderAll();
 }
-function closeStudySession(){activeTestQuestions=[]; $("studySessionModal").classList.remove("open");window._activeTask=null; }
+function closeStudySession(){activeTestQuestions=[];const modal=$("studySessionModal");modal.classList.remove("open");modal.setAttribute("aria-hidden","true");const box=modal.querySelector(".study-modal-box");if(box)box.scrollTop=0;modal.scrollTop=0;window._activeTask=null;}
 function renderHome(){
  const u=current(),p=profile();if(!u)return;
  $("appUser").textContent=u.email;$("welcome").textContent="Welcome, "+(u.name||"Student").split(" ")[0]+" 👋";
@@ -1337,6 +1337,7 @@ window.generateQuestions=generateQuestions;
 document.addEventListener("click",function(e){
  const btn=e.target&&e.target.closest?e.target.closest("#generateQuestionsBtn"):null;
  if(!btn)return;
+ btn.dataset.nexoraClickHandled="1";
  e.preventDefault();
  try{
   if(typeof window.generateQuestions!=="function")throw new Error("Question generator did not initialise. Reload NEXORA and try again.");
@@ -1657,7 +1658,7 @@ window.addEventListener("click",e=>{if(e.target.classList.contains("modal"))e.ta
  <div class="study-modal-box">
   <div class="study-modal-head">
    <div><h2 id="sessionTitle">Study Session</h2><p id="sessionMeta" class="muted"></p></div>
-   <button class="btn" onclick="closeStudySession()">×</button>
+   <button class="btn" type="button" aria-label="Back to Today" onclick="closeStudySession()">← Back</button>
   </div>
   <div id="sessionBody"></div>
  </div>
@@ -1807,7 +1808,7 @@ window.addEventListener("click",e=>{if(e.target.classList.contains("modal"))e.ta
       const subjectName=({math:'Mathematics',maths:'Mathematics',mathematics:'Mathematics',physics:'Physics',chemistry:'Chemistry'})[key(subject)]||subject;
       const kb=(typeof knowledgeBank!=='undefined'&&knowledgeBank[subjectName])||{};
       const wanted=key(topic);
-      const matched=Object.keys(kb).find(t=>key(t)===wanted);
+      const matched=Object.keys(kb).find(t=>key(t)===wanted)||Object.keys(kb).find(t=>wanted.length>=8&&(key(t).includes(wanted)||wanted.includes(key(t))));
       if(matched){
         const x=kb[matched];
         if(x&&x.concept&&Array.isArray(x.practice)&&x.practice.length)l=Object.assign({},x,{title:x.title||matched+' — NEXORA Lesson',testTopics:[matched],detailLevel:'chapter-specific'});
@@ -1890,6 +1891,7 @@ window.addEventListener("click",e=>{if(e.target.classList.contains("modal"))e.ta
     window._activeTask=t;
     const title=document.getElementById('sessionTitle'),meta=document.getElementById('sessionMeta'),body=document.getElementById('sessionBody'),modal=document.getElementById('studySessionModal');
     if(!title||!meta||!body||!modal)return;
+    modal.setAttribute("aria-hidden","false");modal.scrollTop=0;const modalBox=modal.querySelector(".study-modal-box");if(modalBox)modalBox.scrollTop=0;
     const l=t.lesson||{};
     title.textContent=t.title;
     meta.textContent='Day '+dayNow()+' • '+t.meta;
