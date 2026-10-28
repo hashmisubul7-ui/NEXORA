@@ -76,7 +76,7 @@ for (const [topic, subject, count] of [["Kinematics", "Physics", 5], ["Quadratic
   assert.ok(mock.qStatus.textContent.length, topic + " should report result");
 }
 
-const clickHandlerStart = html.indexOf('document.addEventListener("click",function(e){\\n const btn=e.target&&e.target.closest?e.target.closest("#generateQuestionsBtn"):null;');
+const clickHandlerStart = html.indexOf('document.addEventListener("click",function(e){\n const btn=e.target&&e.target.closest?e.target.closest("#generateQuestionsBtn"):null;');
 const clickHandlerEnd = html.indexOf('},true);', clickHandlerStart) + 7;
 assert.ok(clickHandlerStart > 0 && clickHandlerEnd > clickHandlerStart, "Question Lab click handler must exist");
 const clickHandlerSource = html.slice(clickHandlerStart, clickHandlerEnd);
