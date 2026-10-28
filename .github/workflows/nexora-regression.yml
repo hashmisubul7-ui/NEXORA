@@ -1,0 +1,23 @@
+name: NEXORA regression tests
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'index.html'
+      - 'tests/**'
+      - '.github/workflows/nexora-regression.yml'
+  workflow_dispatch:
+
+jobs:
+  regression:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Run NEXORA regression tests
+        run: node tests/nexora-regression.cjs
