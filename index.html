@@ -1902,6 +1902,30 @@ window.addEventListener("click",e=>{if(e.target.classList.contains("modal"))e.ta
     modal.classList.add('open');
   }
 
+  // Back-button failsafe: handle the tap at document capture level, independent
+  // of inline handlers or later bubbling listeners.
+  function forceCloseStudyModal(e){
+    const target=e.target;
+    const btn=target&&target.closest?target.closest('#studySessionModal [aria-label="Back to Today"]'):null;
+    if(!btn)return;
+    if(e.cancelable)e.preventDefault();
+    e.stopPropagation();
+    if(typeof e.stopImmediatePropagation==='function')e.stopImmediatePropagation();
+    const modal=document.getElementById('studySessionModal');
+    if(modal){
+      modal.classList.remove('open');
+      modal.setAttribute('aria-hidden','true');
+      modal.style.setProperty('display','none','important');
+      modal.scrollTop=0;
+      const box=modal.querySelector('.study-modal-box');
+      if(box)box.scrollTop=0;
+    }
+    window._activeTask=null;
+  }
+  document.addEventListener('pointerup',forceCloseStudyModal,true);
+  document.addEventListener('click',forceCloseStudyModal,true);
+  document.addEventListener('touchend',forceCloseStudyModal,{capture:true,passive:false});
+
   document.addEventListener('click',function(e){
     const btn=e.target.closest('[data-nexora-task]');
     if(btn){e.preventDefault();e.stopPropagation();openRealSession(btn.getAttribute('data-nexora-task'));}
