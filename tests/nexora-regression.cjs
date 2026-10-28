@@ -79,6 +79,9 @@ for (const [topic, subject, count] of [["Kinematics", "Physics", 5], ["Quadratic
 const clickHandlerStart = html.indexOf('document.addEventListener("click",function(e){\n const btn=e.target&&e.target.closest?e.target.closest("#generateQuestionsBtn"):null;');
 const clickHandlerEnd = html.indexOf('},true);', clickHandlerStart) + 7;
 assert.ok(clickHandlerStart > 0 && clickHandlerEnd > clickHandlerStart, "Question Lab click handler must exist");
+assert.match(html, /id="generateQuestionsBtn"[^>]*onclick="[^"]*window\\.generateQuestions/, "Generate button must have a direct inline fallback");
+assert.match(html, /aria-label="Back to Today" onclick="closeStudySession\\(\\)">← Back/, "Lesson modal must provide a visible Back button");
+assert.match(html, /\\.study-modal-head\\{position:sticky/, "Lesson header must stay visible while scrolling");
 const clickHandlerSource = html.slice(clickHandlerStart, clickHandlerEnd);
 const clickMock = {
   qTopic: { value: "Kinematics", focus() {} },
@@ -94,16 +97,16 @@ const clickDocument = {
   getElementById: id => clickMock[id] || null,
   addEventListener: (name, fn) => { if (name === "click") clickHandlers.push(fn); }
 };
-const clickSource = "const $ = id => clickMock[id] || null;\\n" +
-  "const esc = s => String(s ?? \"\").replace(/[&<>]/g, c => ({\"&\":\"&amp;\",\"<\":\"&lt;\",\">\":\"&gt;\"}[c]));\\n" +
-  "const toast = x => { clickWindow.__toast = x; };\\nconst updateUserData = fn => { clickWindow.__saved = fn({}); };\\n" +
-  smallBankSource + "\\n" + generatorSource + "\\nwindow.generateQuestions = generateQuestions;\\n" + clickHandlerSource + "\\nreturn window.generateQuestions;";
+const clickSource = "const $ = id => clickMock[id] || null;\n" +
+  "const esc = s => String(s ?? \"\").replace(/[&<>]/g, c => ({\"&\":\"&amp;\",\"<\":\"&lt;\",\">\":\"&gt;\"}[c]));\n" +
+  "const toast = x => { clickWindow.__toast = x; };\nconst updateUserData = fn => { clickWindow.__saved = fn({}); };\n" +
+  smallBankSource + "\n" + generatorSource + "\nwindow.generateQuestions = generateQuestions;\n" + clickHandlerSource + "\nreturn window.generateQuestions;";
 new Function("window", "document", "Math", "clickMock", "clickWindow", "clickHandlers", clickSource)(
   clickWindow, clickDocument, Math, clickMock, clickWindow, clickHandlers
 );
 assert.equal(clickHandlers.length, 1, "Question Lab should register one delegated click handler");
 clickHandlers[0]({
-  target: { closest: selector => selector === "#generateQuestionsBtn" ? {} : null },
+  target: { closest: selector => selector === "#generateQuestionsBtn" ? { dataset: {} } : null },
   preventDefault() {}
 });
 assert.equal((clickMock.questions.innerHTML.match(/class="question"/g) || []).length, 5, "Clicking Generate Questions should render questions");
