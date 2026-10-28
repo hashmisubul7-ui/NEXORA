@@ -1658,7 +1658,7 @@ window.addEventListener("click",e=>{if(e.target.classList.contains("modal"))e.ta
  <div class="study-modal-box">
   <div class="study-modal-head">
    <div><h2 id="sessionTitle">Study Session</h2><p id="sessionMeta" class="muted"></p></div>
-   <button class="btn" type="button" aria-label="Back to Today" onclick="event.preventDefault();event.stopPropagation();var m=document.getElementById('studySessionModal');if(m){m.classList.remove('open');m.setAttribute('aria-hidden','true');m.style.display='none';m.scrollTop=0;var b=m.querySelector('.study-modal-box');if(b)b.scrollTop=0;}window._activeTask=null;return false;">← Back</button>
+   <button class="btn" type="button" aria-label="Back to Today" onclick="closeStudySession();return false;">← Back</button>
   </div>
   <div id="sessionBody"></div>
  </div>
@@ -1904,28 +1904,6 @@ window.addEventListener("click",e=>{if(e.target.classList.contains("modal"))e.ta
 
   // Back-button failsafe: handle the tap at document capture level, independent
   // of inline handlers or later bubbling listeners.
-  function forceCloseStudyModal(e){
-    const target=e.target;
-    const btn=target&&target.closest?target.closest('#studySessionModal [aria-label="Back to Today"]'):null;
-    if(!btn)return;
-    if(e.cancelable)e.preventDefault();
-    e.stopPropagation();
-    if(typeof e.stopImmediatePropagation==='function')e.stopImmediatePropagation();
-    const modal=document.getElementById('studySessionModal');
-    if(modal){
-      modal.classList.remove('open');
-      modal.setAttribute('aria-hidden','true');
-      modal.style.setProperty('display','none','important');
-      modal.scrollTop=0;
-      const box=modal.querySelector('.study-modal-box');
-      if(box)box.scrollTop=0;
-    }
-    window._activeTask=null;
-  }
-  document.addEventListener('pointerup',forceCloseStudyModal,true);
-  document.addEventListener('click',forceCloseStudyModal,true);
-  document.addEventListener('touchend',forceCloseStudyModal,{capture:true,passive:false});
-
   document.addEventListener('click',function(e){
     const btn=e.target.closest('[data-nexora-task]');
     if(btn){e.preventDefault();e.stopPropagation();openRealSession(btn.getAttribute('data-nexora-task'));}
