@@ -1658,7 +1658,7 @@ window.addEventListener("click",e=>{if(e.target.classList.contains("modal"))e.ta
  <div class="study-modal-box">
   <div class="study-modal-head">
    <div><h2 id="sessionTitle">Study Session</h2><p id="sessionMeta" class="muted"></p></div>
-   <button class="btn" type="button" aria-label="Back to Today" onclick="closeStudySession();return false;">← Back</button>
+   <button class="btn" type="button" aria-label="Back to Today" onclick="if(window.nexoraTodayCourseBridge){window.nexoraTodayCourseBridge.closeRealSession()}else{closeStudySession()}return false;">← Back</button>
   </div>
   <div id="sessionBody"></div>
  </div>
@@ -1886,6 +1886,18 @@ window.addEventListener("click",e=>{if(e.target.classList.contains("modal"))e.ta
     if(txt)txt.textContent=p?completed+' of '+tasks.length+' study sessions completed today.':'Set up your profile to start today.';
   }
 
+  function closeRealSession(){
+    const modal=document.getElementById('studySessionModal');
+    if(!modal)return;
+    modal.classList.remove('open');
+    modal.style.setProperty('display','none','important');
+    modal.setAttribute('aria-hidden','true');
+    const box=modal.querySelector('.study-modal-box');
+    if(box)box.scrollTop=0;
+    modal.scrollTop=0;
+    window._activeTask=null;
+  }
+
   function openRealSession(id){
     const t=taskMap[id];if(!t)return;
     window._activeTask=t;
@@ -1913,7 +1925,7 @@ window.addEventListener("click",e=>{if(e.target.classList.contains("modal"))e.ta
     const obs=new MutationObserver(()=>sync());
     obs.observe(box,{childList:true,subtree:true});
     renderTasks();
-    window.nexoraTodayCourseBridge={buildTodayTasks:buildTasks,makePcmLesson:pcmLesson,makeCompetitiveLesson:competitiveLesson,openRealSession};
+    window.nexoraTodayCourseBridge={buildTodayTasks:buildTasks,makePcmLesson:pcmLesson,makeCompetitiveLesson:competitiveLesson,openRealSession,closeRealSession};
   }
 
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',install);else install();
