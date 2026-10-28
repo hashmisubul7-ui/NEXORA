@@ -1073,7 +1073,7 @@ function openStudySession(taskId){
   <div class="lesson-block"><h3>4. Practice</h3>${l.practice.map((x,i)=>`<div class="practice-q"><b>${i+1}. ${esc(x[0])}</b><input id="practice_${i}" placeholder="Write your answer"><button class="btn" style="margin-top:7px" onclick="checkPractice(${i})">Check</button><div id="practiceResult_${i}" class="muted small" style="margin-top:6px"></div></div>`).join("")}</div>
   <div class="notice" style="margin-top:12px">Finish the lesson and practice before completing the task. NEXORA will record this session in your progress.</div>
   <div class="session-actions"><button class="btn primary" onclick="completeStudyTask()">✓ Complete study session</button><button class="btn" onclick="setTimer(${Math.min(180,Math.max(10,task.minutes||25))})">⏱ Start focus timer</button></div>`;
- const modal=$("studySessionModal");modal.setAttribute("aria-hidden","false");modal.classList.add("open");modal.scrollTop=0;const box=modal.querySelector(".study-modal-box");if(box)box.scrollTop=0;
+ const modal=$("studySessionModal");modal.style.display="flex";modal.setAttribute("aria-hidden","false");modal.classList.add("open");modal.scrollTop=0;const box=modal.querySelector(".study-modal-box");if(box)box.scrollTop=0;
 }
 function normalizeAnswer(s){return String(s||"").toLowerCase().replace(/[−–—]/g,"-").replace(/,/g,"").replace(/\s+/g," ").trim()}
 function checkPractice(i){
@@ -1115,7 +1115,7 @@ function completeStudyTask(){
  }
  renderAll();
 }
-function closeStudySession(){activeTestQuestions=[];const modal=$("studySessionModal");modal.classList.remove("open");modal.setAttribute("aria-hidden","true");const box=modal.querySelector(".study-modal-box");if(box)box.scrollTop=0;modal.scrollTop=0;window._activeTask=null;}
+function closeStudySession(){activeTestQuestions=[];const modal=$("studySessionModal");modal.classList.remove("open");modal.style.display="none";modal.setAttribute("aria-hidden","true");const box=modal.querySelector(".study-modal-box");if(box)box.scrollTop=0;modal.scrollTop=0;window._activeTask=null;}
 function renderHome(){
  const u=current(),p=profile();if(!u)return;
  $("appUser").textContent=u.email;$("welcome").textContent="Welcome, "+(u.name||"Student").split(" ")[0]+" 👋";
@@ -1658,7 +1658,7 @@ window.addEventListener("click",e=>{if(e.target.classList.contains("modal"))e.ta
  <div class="study-modal-box">
   <div class="study-modal-head">
    <div><h2 id="sessionTitle">Study Session</h2><p id="sessionMeta" class="muted"></p></div>
-   <button class="btn" type="button" aria-label="Back to Today" onclick="closeStudySession()">← Back</button>
+   <button class="btn" type="button" aria-label="Back to Today" onclick="event.preventDefault();event.stopPropagation();var m=document.getElementById('studySessionModal');if(m){m.classList.remove('open');m.setAttribute('aria-hidden','true');m.style.display='none';m.scrollTop=0;var b=m.querySelector('.study-modal-box');if(b)b.scrollTop=0;}window._activeTask=null;return false;">← Back</button>
   </div>
   <div id="sessionBody"></div>
  </div>
