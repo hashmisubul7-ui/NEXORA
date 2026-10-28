@@ -64,7 +64,7 @@ function runGenerator(topic, subject, count) {
   const mock = { qTopic: { value: topic, focus() {} }, qSubject: { value: subject }, qCount: { value: String(count) }, qLevel: { value: "JEE Main" }, qStatus: { textContent: "" }, questions: { innerHTML: "" } };
   const window = { nexoraPCMContent: pcmBank };
   const source = "const $ = id => mock[id] || null;\n" +
-    'const esc = s => String(s ?? "").replace(/[&<>"\']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",\'"\':"&quot;",\'\'\':"&#39;"}[c]));\n' +
+    "const esc = s => String(s ?? \"\" ).replace(/[&<>]/g, c => ({\"&\":\"&amp;\",\"<\":\"&lt;\",\">\":\"&gt;\"}[c]));\\n" +
     "const toast = x => { window.__toast = x; };\nconst updateUserData = fn => { window.__saved = fn({}); };\n" +
     smallBankSource + "\n" + generatorSource + "\nreturn generateQuestions;";
   new Function("window", "document", "Math", "mock", source)(window, { getElementById: id => mock[id] }, Math, mock)();
