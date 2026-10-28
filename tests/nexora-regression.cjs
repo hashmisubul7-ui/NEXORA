@@ -50,6 +50,15 @@ for (const task of tasks) {
   assert.ok(!task.lesson.concept.includes("does not yet have a verified chapter-specific lesson"), task.subject + "/" + task.topic + " must not show the missing-lesson fallback");
   assert.ok(!(task.lesson.formulas || []).some(x => String(x).includes("copy the exact formula")), task.subject + "/" + task.topic + " must not show generic formula placeholders");
 }
+const mathsProfile = () => ({ goalKey: "competitive", exam: "JEE Advanced", currentSubject: "Maths", currentTopic: "Sets, Relations and Functions", time: 60, weak: "" });
+const mathsSubjects = () => ["Maths"];
+const mathsWindow = {};
+const mathsFactory = new Function("window", "document", "MutationObserver", "setTimeout", "profileProvider", "subjectProvider", "dayProvider", factorySource);
+const mathsBridge = mathsFactory(mathsWindow, documentMock, mutationObserverMock, () => {}, mathsProfile, mathsSubjects, dayProvider);
+const mathsTasks = mathsBridge.buildTodayTasks();
+assert.equal(mathsTasks.length, 1, "A saved Maths-only profile should create one task");
+assert.equal(mathsTasks[0].lesson.detailLevel, "chapter-specific", "Saved Maths / Sets profile must resolve real lesson content");
+assert.ok(!mathsTasks[0].lesson.concept.includes("does not yet have a verified chapter-specific lesson"), "Saved Maths / Sets profile must not show the missing-lesson fallback");
 for (const [subject, topic] of [["Physics", "Newton's Laws"], ["Chemistry", "Atomic Structure"], ["Mathematics", "Sequences and Series"], ["Maths", "Quadratic Equations"]]) {
   const lesson = bridge.makePcmLesson(subject, topic);
   assert.ok(lesson && lesson.practice.length, "Alias/topic resolution must work for " + subject + "/" + topic);
