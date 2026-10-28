@@ -1,4 +1,5 @@
 name: NEXORA regression tests
+# Runs the built-in lesson and Question Lab regression harness on changes.
 
 on:
   push:
