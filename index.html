@@ -226,7 +226,7 @@ label.field>span{display:block;margin:0 0 7px}
 </div>
 
 <!-- AUTH MODAL -->
-<div id="authModal" class="modal"><div class="modalbox"><div class="modalhead"><h2 id="authTitle">Sign in to NEXORA</h2><button class="close" onclick="closeModal('authModal')">×</button></div><div class="notice" style="margin-top:12px"><b>⚠️ Important: Your data is stored only in this browser on this device.</b><br>It is not uploaded to a NEXORA server. Clearing browser data, changing browser or switching devices may remove or leave your data behind. Use Backup & Restore in Settings to keep a copy.</div><div id="authError" class="error"></div><label class="field" id="nameField"><span>Name</span><input id="authName" placeholder="Your name"></label><label class="field"><span>Email (optional for local profile)</span><input id="authEmail" type="email" placeholder="you@example.com"></label><label class="field"><span>Password (only for legacy account sign-in)</span><input id="authPassword" type="password" placeholder="At least 6 characters"></label><button class="btn primary" style="width:100%" onclick="submitAuth()">Continue with email & password</button><button class="btn" style="width:100%;margin-top:8px" onclick="continueOnDevice()">Continue on this device — no password</button><button id="authSwitch" class="btn ghost" style="width:100%;margin-top:8px" onclick="toggleAuth()">Create account</button></div></div>
+<div id="authModal" class="modal"><div class="modalbox"><div class="modalhead"><h2 id="authTitle">Sign in to NEXORA</h2><button class="close" onclick="closeModal('authModal')">×</button></div><div class="notice" style="margin-top:12px"><b>⚠️ Important: Your data is stored only in this browser on this device.</b><br>It is not uploaded to a NEXORA server. Clearing browser data, changing browser or switching devices may remove or leave your data behind. Use Backup & Restore in Settings to keep a copy.</div><div id="authError" class="error"></div><div id="localProfileChoices"></div><label class="field" id="nameField"><span>Name</span><input id="authName" placeholder="Your name"></label><label class="field"><span>Email (optional for local profile)</span><input id="authEmail" type="email" placeholder="you@example.com"></label><label class="field"><span>Password (only needed for older password-based accounts)</span><input id="authPassword" type="password" placeholder="At least 6 characters"></label><button class="btn primary" style="width:100%" onclick="submitAuth()">Continue</button><button class="btn" style="width:100%;margin-top:8px" onclick="continueOnDevice()">Continue on this device — no password</button><button id="authSwitch" class="btn ghost" style="width:100%;margin-top:8px" onclick="toggleAuth()">Create account</button></div></div>
 
 <!-- STUDENT MODAL -->
 <div id="studentModal" class="modal"><div class="modalbox"><div class="modalhead"><h2>Student Setup</h2><button class="close" onclick="closeModal('studentModal')">×</button></div><p class="muted">Fill this once. You can edit it later from Profile.</p><div id="studentError" class="error"></div>
@@ -295,24 +295,45 @@ function summarize(){
  $("sumResult").classList.remove("hidden");
 }
 
-function openAuth(mode){authMode=mode;$("authTitle").textContent=mode==="login"?"Sign in to NEXORA":"Create your NEXORA account";$("nameField").classList.toggle("hidden",mode==="login");$("authSwitch").textContent=mode==="login"?"Create account":"Already have an account? Sign in";$("authError").textContent="";openModal("authModal")}
+function openAuth(mode){
+ authMode=mode;$("authTitle").textContent=mode==="login"?"Sign in to NEXORA":"Create a local NEXORA profile";
+ $("nameField").classList.toggle("hidden",mode==="login");
+ $("authPassword").closest("label").classList.toggle("hidden",mode==="signup");
+ $("authSwitch").textContent=mode==="login"?"Create local profile":"Back to sign in";
+ $("authError").textContent="";$("localProfileChoices").innerHTML="";openModal("authModal");
+}
 function toggleAuth(){openAuth(authMode==="login"?"signup":"login")}
 function submitAuth(){
  const name=$("authName").value.trim(),email=$("authEmail").value.trim().toLowerCase(),pw=$("authPassword").value;
- if(!email||!pw||(authMode==="signup"&&!name)){$("authError").textContent="Please fill all required fields.";return}
- if(pw.length<6){$("authError").textContent="Password must be at least 6 characters.";return}
  if(authMode==="signup"){
-   if(state.users[email]){$("authError").textContent="Account already exists. Sign in instead.";return}
-   state.users[email]={name,email,password:pw,plan:"Free",data:{tasks:{},notes:[],doubts:[],history:[],questions:[]}};
- }else if(!state.users[email]||state.users[email].password!==pw){$("authError").textContent="Incorrect email or password.";return}
+  if(!name){$("authError").textContent="Please enter your name.";return}
+  if(email&&!/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(email)){$("authError").textContent="Enter a valid email or leave it blank.";return}
+  const key=email||("local-"+Date.now());
+  if(state.users[key]){$("authError").textContent="This email already has a profile on this device. Choose it under saved profiles.";return}
+  state.users[key]={name,email,localOnly:true,plan:"Free",data:{tasks:{},notes:[],doubts:[],history:[],questions:[]}};
+  state.current=key;saveState();closeModal("authModal");enterApp();toast("Local profile created on this device.");return;
+ }
+ if(!email||!pw){$("authError").textContent="For an older account, enter its email and password. Or choose Continue on this device.";return}
+ if(!state.users[email]||state.users[email].password!==pw){$("authError").textContent="Incorrect email or password. Try Continue on this device if the profile is saved here.";return}
  state.current=email;saveState();closeModal("authModal");enterApp();
 }
 function continueOnDevice(){
  const keys=Object.keys(state.users||{});
- let key=state.current&&state.users[state.current]?state.current:(keys.length===1?keys[0]:null);
- if(!key&&keys.length>1){$("authError").textContent="Multiple saved profiles found. Sign in with the original email/password to choose the correct profile, or use another browser profile.";return}
- if(!key){key="device-"+Date.now();const name=$("authName").value.trim()||"NEXORA Student";state.users[key]={name,email:"",localOnly:true,plan:"Free",data:{tasks:{},notes:[],doubts:[],history:[],questions:[]}}}
- state.current=key;saveState();closeModal("authModal");enterApp();toast("Continuing with this device profile.");
+ if(state.current&&state.users[state.current]){enterApp();closeModal("authModal");return}
+ if(keys.length===1){state.current=keys[0];saveState();closeModal("authModal");enterApp();toast("Saved profile opened on this device.");return}
+ if(keys.length>1){
+  $("authError").textContent="Choose the saved profile you want to open on this device:";
+  $("localProfileChoices").innerHTML=keys.map(k=>'<button class="btn" style="width:100%;margin:0 0 8px;text-align:left" onclick="openSavedLocalProfile('+JSON.stringify(k).replace(/</g,'\\u003c')+')">👤 '+esc(state.users[k].name||"Student")+(state.users[k].email?' · '+esc(state.users[k].email):' · Local profile')+'</button>').join('');
+  return;
+ }
+ const name=$("authName").value.trim()||"NEXORA Student";
+ const key="device-"+Date.now();
+ state.users[key]={name,email:"",localOnly:true,plan:"Free",data:{tasks:{},notes:[],doubts:[],history:[],questions:[]}};
+ state.current=key;saveState();closeModal("authModal");enterApp();toast("Local profile created on this device.");
+}
+function openSavedLocalProfile(key){
+ if(!state.users||!state.users[key]){$("authError").textContent="That saved profile is unavailable.";return}
+ state.current=key;saveState();closeModal("authModal");enterApp();toast("Saved profile opened on this device.");
 }
 function startStudent(){if(!current()){openAuth("login");toast("Sign in first, then create your study profile.");return}openStudent()}
 function enterApp(){$("landing").classList.add("hidden");$("app").classList.remove("hidden");renderAll();go("home")}
