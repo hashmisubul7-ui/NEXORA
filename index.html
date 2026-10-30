@@ -211,7 +211,7 @@ label.field>span{display:block;margin:0 0 7px}
 <!-- SETTINGS -->
 <section id="page-settings" class="page">
  <h1 class="page-title">Settings</h1><p class="page-sub">Control the app without changing your study data by accident.</p>
- <div class="settings-grid"><div class="settings-card card"><h3>Appearance</h3><p class="muted">Choose how NEXORA looks on this device.</p><div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn" onclick="setTheme('light')">☀️ Light</button><button class="btn" onclick="setTheme('dark')">🌙 Dark</button><button class="btn" onclick="setTheme('system')">📱 System</button></div></div><div class="settings-card card"><h3>Data</h3><p class="muted">This prototype stores data in this browser using localStorage.</p><button class="btn danger" onclick="resetAllData()">Reset local data</button></div></div>
+ <div class="settings-grid"><div class="settings-card card"><h3>Appearance</h3><p class="muted">Choose how NEXORA looks on this device.</p><div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn" onclick="setTheme('light')">☀️ Light</button><button class="btn" onclick="setTheme('dark')">🌙 Dark</button><button class="btn" onclick="setTheme('system')">📱 System</button></div></div><div class="settings-card card"><h3>Data & Backup</h3><div class="notice"><b>⚠️ Your data stays in this browser on this device.</b><br>It is not stored on a NEXORA server. If browser data is cleared or you change devices, your data may be lost. Export a backup regularly and keep it somewhere safe.</div><p class="muted">Download a copy of your NEXORA profile and study data, or restore a backup on this device.</p><div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn primary" onclick="exportBackup()">⬇️ Download backup</button><label class="btn" style="display:inline-flex;align-items:center;gap:6px">⬆️ Restore backup<input type="file" accept="application/json,.json" hidden onchange="importBackup(event)"></label><button class="btn danger" onclick="resetAllData()">Reset local data</button></div></div></div>
 </section>
 </main>
 <nav class="appnav" aria-label="main navigation">
@@ -226,7 +226,7 @@ label.field>span{display:block;margin:0 0 7px}
 </div>
 
 <!-- AUTH MODAL -->
-<div id="authModal" class="modal"><div class="modalbox"><div class="modalhead"><h2 id="authTitle">Sign in to NEXORA</h2><button class="close" onclick="closeModal('authModal')">×</button></div><p class="muted">Prototype account system — data stays in this browser.</p><div id="authError" class="error"></div><label class="field" id="nameField"><span>Name</span><input id="authName" placeholder="Your name"></label><label class="field"><span>Email</span><input id="authEmail" type="email" placeholder="you@example.com"></label><label class="field"><span>Password</span><input id="authPassword" type="password" placeholder="At least 6 characters"></label><button class="btn primary" style="width:100%" onclick="submitAuth()">Continue</button><button id="authSwitch" class="btn ghost" style="width:100%;margin-top:8px" onclick="toggleAuth()">Create account</button></div></div>
+<div id="authModal" class="modal"><div class="modalbox"><div class="modalhead"><h2 id="authTitle">Sign in to NEXORA</h2><button class="close" onclick="closeModal('authModal')">×</button></div><div class="notice" style="margin-top:12px"><b>⚠️ Important: Your data is stored only in this browser on this device.</b><br>It is not uploaded to a NEXORA server. Clearing browser data, changing browser or switching devices may remove or leave your data behind. Use Backup & Restore in Settings to keep a copy.</div><div id="authError" class="error"></div><label class="field" id="nameField"><span>Name</span><input id="authName" placeholder="Your name"></label><label class="field"><span>Email (optional for local profile)</span><input id="authEmail" type="email" placeholder="you@example.com"></label><label class="field"><span>Password (only for legacy account sign-in)</span><input id="authPassword" type="password" placeholder="At least 6 characters"></label><button class="btn primary" style="width:100%" onclick="submitAuth()">Continue with email & password</button><button class="btn" style="width:100%;margin-top:8px" onclick="continueOnDevice()">Continue on this device — no password</button><button id="authSwitch" class="btn ghost" style="width:100%;margin-top:8px" onclick="toggleAuth()">Create account</button></div></div>
 
 <!-- STUDENT MODAL -->
 <div id="studentModal" class="modal"><div class="modalbox"><div class="modalhead"><h2>Student Setup</h2><button class="close" onclick="closeModal('studentModal')">×</button></div><p class="muted">Fill this once. You can edit it later from Profile.</p><div id="studentError" class="error"></div>
@@ -307,8 +307,24 @@ function submitAuth(){
  }else if(!state.users[email]||state.users[email].password!==pw){$("authError").textContent="Incorrect email or password.";return}
  state.current=email;saveState();closeModal("authModal");enterApp();
 }
+function continueOnDevice(){
+ const keys=Object.keys(state.users||{});
+ let key=state.current&&state.users[state.current]?state.current:(keys.length===1?keys[0]:null);
+ if(!key&&keys.length>1){$("authError").textContent="Multiple saved profiles found. Sign in with the original email/password to choose the correct profile, or use another browser profile.";return}
+ if(!key){key="device-"+Date.now();const name=$("authName").value.trim()||"NEXORA Student";state.users[key]={name,email:"",localOnly:true,plan:"Free",data:{tasks:{},notes:[],doubts:[],history:[],questions:[]}}}
+ state.current=key;saveState();closeModal("authModal");enterApp();toast("Continuing with this device profile.");
+}
 function startStudent(){if(!current()){openAuth("login");toast("Sign in first, then create your study profile.");return}openStudent()}
 function enterApp(){$("landing").classList.add("hidden");$("app").classList.remove("hidden");renderAll();go("home")}
+function exportBackup(){
+ if(!current()){toast("No local profile is active.");return}
+ const payload={format:"NEXORA_LOCAL_BACKUP",version:1,exportedAt:new Date().toISOString(),userKey:state.current,user:current(),theme:state.theme};
+ const blob=new Blob([JSON.stringify(payload,null,2)],{type:"application/json"});const url=URL.createObjectURL(blob);const a=document.createElement("a");a.href=url;a.download="nexora-backup-"+new Date().toISOString().slice(0,10)+".json";document.body.appendChild(a);a.click();a.remove();URL.revokeObjectURL(url);toast("Backup downloaded. Keep it somewhere safe.");
+}
+function importBackup(event){
+ const file=event.target.files&&event.target.files[0];if(!file)return;
+ const reader=new FileReader();reader.onload=()=>{try{const data=JSON.parse(String(reader.result||""));if(data.format!=="NEXORA_LOCAL_BACKUP"||!data.user||typeof data.user!=="object")throw new Error("This is not a valid NEXORA backup.");const key=String(data.userKey||("restored-"+Date.now()));if(state.users[key]&&!confirm("A profile with this backup ID already exists. Replace it with the backup?"))return;state.users[key]=data.user;state.current=key;if(data.theme)state.theme=data.theme;saveState();document.body.dataset.theme=getThemeActual();enterApp();toast("Backup restored on this device.");}catch(err){alert(err.message||"Could not restore this backup.");}finally{event.target.value="";}};reader.onerror=()=>alert("Could not read the backup file.");reader.readAsText(file);
+}
 function logout(){state.current=null;saveState();$("app").classList.add("hidden");$("landing").classList.remove("hidden");window.scrollTo(0,0);toast("Logged out")}
 if(current())enterApp();
 
@@ -1646,7 +1662,7 @@ function saveStudent(){
 }
 function renderProfile(){
  const u=current(),p=profile();if(!u)return;
- $("accountRows").innerHTML=`<div class="profile-row"><span>Name</span><b>${esc(u.name)}</b></div><div class="profile-row"><span>Email</span><b>${esc(u.email)}</b></div><div class="profile-row"><span>Plan</span><b>${esc(u.plan||"Free")}</b></div>`;
+ $("accountRows").innerHTML=`<div class="profile-row"><span>Name</span><b>${esc(u.name)}</b></div><div class="profile-row"><span>Account</span><b>${u.localOnly||!u.email?"Local device profile":esc(u.email)}</b></div><div class="profile-row"><span>Plan</span><b>${esc(u.plan||"Free")}</b></div>`;
  if(!p){$("profileRows").innerHTML='<p class="muted">No student profile yet.</p>';return}
  const statusLabel={not_started:"Haven't started",current:"Currently studying",some_done:"Some chapters completed",complete:"Syllabus completed",practice_only:"Syllabus complete — practice/tests only"}; const rows=[["Education",p.type],["Board",p.board],["Class",p.className],["Stream",p.stream],["Subjects",(p.subjects||[]).join(", ")],["Goal",p.goalText],["Competitive exam",p.exam],["Syllabus status",statusLabel[p.syllabusStatus]||p.syllabusStatus],["Current subject",p.currentSubject],["Current topic",p.currentTopic],["Completed chapters",(p.completedChapters||[]).join(", ")],["Daily study",p.time],["Level",p.level],["Strong",p.strong],["Weak",p.weak],["Past work",p.pastWork]];
  $("profileRows").innerHTML=rows.filter(x=>x[1]).map(x=>`<div class="profile-row"><span>${esc(x[0])}</span><b>${esc(x[1])}</b></div>`).join("");
