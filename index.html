@@ -1837,21 +1837,25 @@ window.addEventListener("click",e=>{if(e.target.classList.contains("modal"))e.ta
 
   function lesson(subject,topic){
     const p=getProfile();
-    // Resolve the exact chapter from the original expanded knowledgeBank first.
-    // It is the source already used by the rest of NEXORA and avoids bank-shape
-    // mismatches between compact PCM entries and expanded lesson objects.
-    let l=null;
-    try{
-      const subjectName=({math:'Mathematics',maths:'Mathematics',mathematics:'Mathematics',physics:'Physics',chemistry:'Chemistry'})[key(subject)]||subject;
-      const kb=(typeof knowledgeBank!=='undefined'&&knowledgeBank[subjectName])||{};
-      const wanted=key(topic);
-      const matched=Object.keys(kb).find(t=>key(t)===wanted)||Object.keys(kb).find(t=>wanted.length>=8&&(key(t).includes(wanted)||wanted.includes(key(t))));
-      if(matched){
-        const x=kb[matched];
-        if(x&&x.concept&&Array.isArray(x.practice)&&x.practice.length)l=Object.assign({},x,{title:x.title||matched+' — NEXORA Lesson',testTopics:[matched],detailLevel:'chapter-specific'});
-      }
-    }catch(e){}
-    if(!l)l=pcmLesson(subject,topic)||competitiveLesson(subject,topic);
+    // Prefer the chapter-specific compact PCM bank. The expanded knowledgeBank
+    // may contain an older generic outline for the same chapter; choosing it
+    // first caused Today to hide the real worked examples and practice set.
+    let l=pcmLesson(subject,topic);
+    // Retain the expanded bank as a compatibility fallback for chapters that
+    // are not yet present in the compact chapter-specific bank.
+    if(!l){
+      try{
+        const subjectName=({math:'Mathematics',maths:'Mathematics',mathematics:'Mathematics',physics:'Physics',chemistry:'Chemistry'})[key(subject)]||subject;
+        const kb=(typeof knowledgeBank!=='undefined'&&knowledgeBank[subjectName])||{};
+        const wanted=key(topic);
+        const matched=Object.keys(kb).find(t=>key(t)===wanted)||Object.keys(kb).find(t=>wanted.length>=8&&(key(t).includes(wanted)||wanted.includes(key(t))));
+        if(matched){
+          const x=kb[matched];
+          if(x&&x.concept&&Array.isArray(x.practice)&&x.practice.length)l=Object.assign({},x,{title:x.title||matched+' — NEXORA Lesson',testTopics:[matched],detailLevel:'chapter-specific'});
+        }
+      }catch(e){}
+    }
+    if(!l)l=competitiveLesson(subject,topic);
     if(!l){
       try{l=typeof lessonForTopic==='function'?lessonForTopic(subject,topic):null}catch(e){}
     }
