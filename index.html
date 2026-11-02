@@ -1194,24 +1194,14 @@ function renderHomeProgress(p){
   (mistakes.length?'<div><b class="small">Recent mistakes</b>'+mistakes.slice(0,3).map(m=>'<div class="profile-row"><span>'+esc(m.question)+'</span><b>Review</b></div>').join('')+'</div>':'');+weakHtml
 }
 function renderToday(){
- const box=$("todayTasks"), p=profile();
- const d=userData(),done=d.tasks||{},tasks=allTasks(),day=cycleDay();
- if(!tasks.length){
-   box.innerHTML='<div class="empty-state"><b>Preparing your study plan…</b><p class="muted small">NEXORA could not read the saved subjects, so a default 3-subject plan is being used.</p></div>';
- }else{
-   box.innerHTML=tasks.map(t=>`<div class="task ${done[t.id]?"done":""}">
-     <button class="task-open" onclick="openStudySession('${t.id}')"><span class="task-title">${done[t.id]?"✓ ":""}${esc(t.title)}</span><div class="muted small">${esc(t.meta)} • ${done[t.id]?"Completed — open again":"Open study session →"}</div></button>
-    </div>`).join("");
+ // The dedicated Today Course Bridge is the single source of truth for Today.
+ // It installs after this main script and performs the first render itself.
+ if(window.nexoraTodayCourseBridge&&typeof window.nexoraTodayCourseBridge.renderTasks==='function'){
+   window.nexoraTodayCourseBridge.renderTasks();
+   return;
  }
- if(isProgressTestDay(day)){
-   box.innerHTML+=`<div class="task"><button class="task-open" onclick="openProgressTest()"><span class="task-title">📝 Day ${day} Progress Test</span><div class="muted small">${testConfig().type==="BOARD"?("Today's "+esc(progressTestSubject(day)||"Board")+" paper"):("Take the "+esc(testConfig().label))} — record your score and mistakes.</div></button></div>`;
- }else if(testConfig().type==="BOARD" && userData().boardNextPaperStatus==="later" && Number(userData().boardNextPaperIndex||0)<Math.min(6,subjects().length)){
-   box.innerHTML+=`<div class="task"><button class="task-open" onclick="openProgressTest()"><span class="task-title">📝 Next Board Paper</span><div class="muted small">You postponed the next paper. Take it whenever you're ready.</div></button></div>`;
- }
- const completedToday=tasks.filter(t=>done[t.id]).length;
- $("todayProgress").style.width=Math.round(completedToday/Math.max(1,tasks.length)*100)+"%";
- const testPending=isProgressTestDay(day)&&completedToday===tasks.length&&!((d.testDays||{})[day]);
- $("todayProgressText").textContent=testPending?`Day ${day}/21 • Study complete ✓ • Take the progress test to unlock the next day.`:`Day ${day}/21 • ${completedToday}/${tasks.length} study sessions complete • ${progress()}% cycle progress.`;
+ const box=$("todayTasks");
+ if(box)box.innerHTML='<div class="empty-state"><b>Preparing your study plan…</b><p class="muted small">Loading your study sessions.</p></div>';
 }
 function toggleTask(id,val){ /* legacy compatibility: tasks are now completed through Study Session */ openStudySession(id); }
 
@@ -1955,18 +1945,12 @@ window.addEventListener("click",e=>{if(e.target.classList.contains("modal"))e.ta
     modal.classList.add('open');
   }
 
-  // Back-button failsafe: handle the tap at document capture level, independent
-  // of inline handlers or later bubbling listeners.
-  let busy=false;
-  function sync(){if(busy)return;busy=true;try{renderTasks()}finally{setTimeout(()=>busy=false,0)}}
-
   function install(){
     const box=document.getElementById('todayTasks');
     if(!box)return setTimeout(install,250);
-    const obs=new MutationObserver(()=>sync());
-    obs.observe(box,{childList:true,subtree:true});
+    // One renderer only: no MutationObserver watching and rewriting its own DOM.
+    window.nexoraTodayCourseBridge={buildTodayTasks:buildTasks,makePcmLesson:pcmLesson,makeCompetitiveLesson:competitiveLesson,renderTasks,openRealSession,closeRealSession};
     renderTasks();
-    window.nexoraTodayCourseBridge={buildTodayTasks:buildTasks,makePcmLesson:pcmLesson,makeCompetitiveLesson:competitiveLesson,openRealSession,closeRealSession};
   }
 
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',install);else install();
