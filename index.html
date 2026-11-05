@@ -93,13 +93,15 @@ label.field>span{display:block;margin:0 0 7px}
  .appnav{bottom:6px}.appnav button{padding:8px 2px}.page-title{font-size:28px}
 }
 
-/* NEXORA study-session engine */
-.study-modal{position:fixed;inset:0;background:rgba(3,5,12,.94);display:none;align-items:flex-start;justify-content:center;padding:12px;z-index:99999;overflow-y:auto;overscroll-behavior:contain;box-sizing:border-box}
+/* NEXORA study-session engine — theme-aware */
+.study-modal{position:fixed;inset:0;background:rgba(3,5,12,.72);display:none;align-items:flex-start;justify-content:center;padding:12px;z-index:99999;overflow-y:auto;overscroll-behavior:contain;box-sizing:border-box}
+body[data-theme="dark"] .study-modal{background:rgba(3,5,12,.94)}
 .study-modal.open{display:flex}
-.study-modal-box{box-sizing:border-box;width:min(760px,100%);max-height:calc(100dvh - 24px);overflow-y:auto;overscroll-behavior:contain;background:#0b0d14;color:#f5f6ff;border:1px solid #343746;border-radius:20px;padding:22px;box-shadow:0 20px 60px rgba(0,0,0,.7);margin:0 auto}
-.study-modal-box .muted{color:#b8bdcf}
-.study-modal-box .lesson-block,.study-modal-box .practice-q{background:#10131d;border-color:#343746}
-.study-modal-box input{box-sizing:border-box;max-width:100%;background:#171b27;color:#fff;border:1px solid #343746;border-radius:14px;padding:13px 14px}
+.study-modal-box{box-sizing:border-box;width:min(760px,100%);max-height:calc(100dvh - 24px);overflow-y:auto;overscroll-behavior:contain;background:var(--surface);color:var(--text);border:1px solid var(--border);border-radius:20px;padding:22px;box-shadow:0 20px 60px rgba(0,0,0,.28);margin:0 auto}
+.study-modal-box .muted{color:var(--muted)}
+.study-modal-box .lesson-block,.study-modal-box .practice-q{background:var(--surface2);border-color:var(--border)}
+.study-modal-head{background:var(--surface)}
+.study-modal-box input{box-sizing:border-box;max-width:100%;background:var(--surface2);color:var(--text);border:1px solid var(--border);border-radius:14px;padding:13px 14px}
 .study-modal-box .session-actions .btn{max-width:100%;white-space:normal}
 @media(max-width:560px){
  .study-modal{padding:7px}
