@@ -228,7 +228,7 @@ body[data-theme="dark"] .study-modal{background:rgba(3,5,12,.94)}
 </div>
 
 <!-- AUTH MODAL -->
-<div id="authModal" class="modal"><div class="modalbox"><div class="modalhead"><h2 id="authTitle">Sign in to NEXORA</h2><button class="close" onclick="closeModal('authModal')">×</button></div><div class="notice" style="margin-top:12px"><b>⚠️ Important: Your data is stored only in this browser on this device.</b><br>It is not uploaded to a NEXORA server. Clearing browser data, changing browser or switching devices may remove or leave your data behind. Use Backup & Restore in Settings to keep a copy.</div><div id="authError" class="error"></div><div id="localProfileChoices"></div><label class="field" id="nameField"><span>Name</span><input id="authName" placeholder="Your name"></label><label class="field"><span>Email (optional for local profile)</span><input id="authEmail" type="email" placeholder="you@example.com"></label><label class="field"><span>Password (legacy accounts only)</span><input id="authPassword" type="password" placeholder="At least 6 characters"></label><button class="btn primary" style="width:100%" onclick="submitAuth()">Open with email + password</button><button class="btn" style="width:100%;margin-top:8px" onclick="continueOnDevice()">Continue on this device — no password</button><button id="authSwitch" class="btn ghost" style="width:100%;margin-top:8px" onclick="toggleAuth()">Create a new local profile</button></div></div>
+<div id="authModal" class="modal"><div class="modalbox"><div class="modalhead"><h2 id="authTitle">Sign in to NEXORA</h2><button class="close" onclick="closeModal('authModal')">×</button></div><div class="notice" style="margin-top:12px"><b>⚠️ Important: Your data is stored only in this browser on this device.</b><br>It is not uploaded to a NEXORA server. Clearing browser data, changing browser or switching devices may remove or leave your data behind. Use Backup & Restore in Settings to keep a copy.</div><div id="authError" class="error"></div><div id="localProfileChoices"></div><label class="field" id="nameField"><span>Name</span><input id="authName" placeholder="Your name"></label><label class="field"><span>Email (optional for local profile)</span><input id="authEmail" type="email" placeholder="you@example.com"></label><label class="field"><span>Password (legacy accounts only)</span><input id="authPassword" type="password" placeholder="At least 6 characters"></label><button id="authSubmit" class="btn primary" style="width:100%" onclick="submitAuth()">Open with email + password</button><button class="btn" style="width:100%;margin-top:8px" onclick="continueOnDevice()">Continue on this device — no password</button><button id="authSwitch" class="btn ghost" style="width:100%;margin-top:8px" onclick="toggleAuth()">Create a new local profile</button></div></div>
 
 <!-- STUDENT MODAL -->
 <div id="studentModal" class="modal"><div class="modalbox"><div class="modalhead"><h2>Student Setup</h2><button class="close" onclick="closeModal('studentModal')">×</button></div><p class="muted">Fill this once. You can edit it later from Profile.</p><div id="studentError" class="error"></div>
@@ -298,10 +298,11 @@ function summarize(){
 }
 
 function openAuth(mode){
- authMode=mode;$("authTitle").textContent=mode==="login"?"Sign in to NEXORA":"Create a local NEXORA profile";
+ authMode=mode;$("authTitle").textContent=mode==="login"?"Open a saved NEXORA profile":"Create a NEXORA profile on this device";
+ $("authSubmit").textContent=mode==="login"?"Open with email + password":"Create local profile";
  $("nameField").classList.toggle("hidden",mode==="login");
  $("authPassword").closest("label").classList.toggle("hidden",mode==="signup");
- $("authSwitch").textContent=mode==="login"?"Create local profile":"Back to sign in";
+ $("authSwitch").textContent=mode==="login"?"Create a new local profile":"Back to saved profiles";
  $("authError").textContent="";$("localProfileChoices").innerHTML="";openModal("authModal");
 }
 function toggleAuth(){openAuth(authMode==="login"?"signup":"login")}
