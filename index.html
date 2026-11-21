@@ -309,7 +309,7 @@ function submitAuth(){
  const name=$("authName").value.trim(),email=$("authEmail").value.trim().toLowerCase(),pw=$("authPassword").value;
  if(authMode==="signup"){
   if(!name){$("authError").textContent="Please enter your name.";return}
-  if(email&&!/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(email)){$("authError").textContent="Enter a valid email or leave it blank.";return}
+  if(email&&!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)){$("authError").textContent="Enter a valid email or leave it blank.";return}
   const key=email||("local-"+Date.now());
   if(state.users[key]){$("authError").textContent="This email already has a profile on this device. Choose it under saved profiles.";return}
   state.users[key]={name,email,localOnly:true,plan:"Free",data:{tasks:{},notes:[],doubts:[],history:[],questions:[]}};
